@@ -1,4 +1,4 @@
-# 禾秝 ERP（HeliERP）
+# HeliERP
 
 臺灣中小企業用桌面型 ERP。以 Windows Forms（.NET 8）為介面，SQLite 單機資料庫，
 涵蓋貿易、庫存、會計、票據、薪資、生管、維修等營運模組與報表列印。

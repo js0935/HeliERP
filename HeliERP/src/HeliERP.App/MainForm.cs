@@ -223,7 +223,7 @@ public class MainForm : Form
         };
         var lblBrand = new Label
         {
-            Text = "禾秝 ERP",
+            Text = "HeliERP",
             Font = UiTheme.Font(18F, FontStyle.Bold),
             ForeColor = Color.White,
             AutoSize = true,

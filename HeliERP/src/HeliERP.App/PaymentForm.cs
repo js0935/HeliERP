@@ -49,7 +49,7 @@ public sealed class PaymentForm : Form
 
     public PaymentForm()
     {
-        Text = "收付系統 - 禾秝ERP";
+        Text = "收付系統 - HeliERP";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
         BackColor = UiTheme.Background;

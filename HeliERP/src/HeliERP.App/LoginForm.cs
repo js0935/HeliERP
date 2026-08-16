@@ -44,7 +44,7 @@ public class LoginForm : Form
     {
         _config = config;
         SecurityService.EnsureLockTable();
-        Text = "禾秝 ERP - 登入";
+        Text = "HeliERP - 登入";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;

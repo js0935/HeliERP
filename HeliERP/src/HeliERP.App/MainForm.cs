@@ -394,6 +394,8 @@ public class MainForm : Form
             "現有數量低於安全存量", dash.庫存不足筆數 > 0 ? UiTheme.Danger : UiTheme.Ok, OpenInventory));
         cardsFlow.Controls.Add(StatCard("應收帳款餘額", dash.應收餘額.ToString("N0"),
             $"未收單據 {dash.未收單據筆數} 筆", UiTheme.Primary, OpenAccountReceivable));
+        cardsFlow.Controls.Add(StatCard("逾期未收", dash.逾期未收金額.ToString("N0"),
+            "帳齡 1 天以上未收金額", dash.逾期未收金額 > 0 ? UiTheme.Danger : UiTheme.Ok, OpenAccountReceivable));
         cardsFlow.Controls.Add(StatCard("應付帳款餘額", dash.應付餘額.ToString("N0"),
             $"未付單據 {dash.未付單據筆數} 筆", UiTheme.AccentDark, OpenPaymentModule));
         cardsFlow.Controls.Add(StatCard("今日出貨", dash.今日出貨金額.ToString("N0"),

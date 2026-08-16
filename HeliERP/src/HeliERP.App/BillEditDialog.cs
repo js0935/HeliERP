@@ -27,8 +27,6 @@ public sealed class BillEditDialog
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(660, 720),
-            AutoScaleMode = AutoScaleMode.Dpi,
-            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10F),
         };

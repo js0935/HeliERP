@@ -31,8 +31,6 @@ public sealed class BillModuleForm : Form
         Text = "票據系統 - 票據管理";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         MinimumSize = new Size(1100, 660);
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("票據系統", "應收票據（收票）／應付票據（付票）管理與狀態作業"));

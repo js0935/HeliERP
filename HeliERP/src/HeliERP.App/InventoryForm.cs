@@ -49,8 +49,6 @@ public sealed class InventoryForm : Form
         Text = "庫存管理";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         var header = UiTheme.BuildHeader("庫存管理", "庫存現量查詢 / 異動歷史 / 類別彙總");

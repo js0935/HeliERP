@@ -28,8 +28,6 @@ public class FirstRunSetupForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         ClientSize = new Size(680, 392);
         UiTheme.Apply(this);
 

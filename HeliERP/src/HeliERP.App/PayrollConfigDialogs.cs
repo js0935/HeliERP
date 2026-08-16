@@ -23,8 +23,6 @@ public static class PayrollConfigDialogs
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(520, 480),
-            AutoScaleMode = AutoScaleMode.Dpi,
-            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10F),
         };

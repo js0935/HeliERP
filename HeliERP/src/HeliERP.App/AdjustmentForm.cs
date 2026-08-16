@@ -36,8 +36,6 @@ public sealed class AdjustmentForm : Form
         Text = "庫存調整單";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         var header = UiTheme.BuildHeader("庫存調整單", "盤點盤盈／盤虧、報廢、贈品、損耗等非進出貨庫存異動");

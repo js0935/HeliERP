@@ -45,8 +45,6 @@ public class GenericTableForm : Form
         Text = _canEdit ? $"{tableName} - 資料維護" : $"{tableName} - 資料檢視〔唯讀〕";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;                  // 96 DPI 設計基準：200% 螢幕下自動放大 2 倍
-        AutoScaleDimensions = new SizeF(96F, 96F);
         Font = new Font("Microsoft JhengHei UI", 11F);
         UiTheme.Apply(this);
 

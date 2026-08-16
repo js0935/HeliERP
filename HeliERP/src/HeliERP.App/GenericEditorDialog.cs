@@ -37,8 +37,6 @@ public sealed class GenericEditorDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         BackColor = UiTheme.Background;
         Font = UiTheme.Font(10F);
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         AutoScroll = true;
 
         // ── 版面順序：定義順序在前；未列出的欄接尾（有定義的表自動隱藏系統欄） ──

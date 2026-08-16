@@ -29,8 +29,6 @@ public sealed class ApprovalForm : Form
         Text = "核准中心";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         Controls.Add(UiTheme.BuildHeader("核准中心", "採購／訂貨／收款／付款等單據多層核准、退回與進度追蹤"));
@@ -226,8 +224,6 @@ public sealed class ApprovalForm : Form
             MaximizeBox = false, MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(430, 360),
-            AutoScaleMode = AutoScaleMode.Dpi,
-            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10.5F),
         };

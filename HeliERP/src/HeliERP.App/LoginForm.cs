@@ -14,7 +14,6 @@ namespace HeliERP.App;
 public class LoginForm : Form
 {
     private readonly DbConfig _config;
-    private readonly float _scale;
     private readonly TextBox _txtUserId;
     private readonly TextBox _txtPassword;
     private readonly ComboBox _cmbDatabase;
@@ -159,12 +158,7 @@ public class LoginForm : Form
         CancelButton = _btnCancel;
 
         LoadDatabases();
-
-        // 依螢幕工作區動態縮放：避免 200% 縮放的小邏輯螢幕（如 1128×704）下視窗超出螢幕被裁切
-        var wa = Screen.PrimaryScreen!.WorkingArea;
-        _scale = Math.Min(2f, Math.Min(wa.Width / 760f, wa.Height / 600f));
-        Scale(new SizeF(_scale, _scale));
-        ClientSize = new Size((int)(760 * _scale), (int)(600 * _scale));
+        UiTheme.ClampToScreen(this);
     }
 
     /// <summary>建立扁平風輸入框</summary>
@@ -292,7 +286,6 @@ public class LoginForm : Form
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        g.ScaleTransform(_scale, _scale);
         const float designH = 600f;
 
         // 左側品牌區：深藍漸層

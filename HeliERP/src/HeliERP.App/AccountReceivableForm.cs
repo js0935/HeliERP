@@ -42,8 +42,6 @@ public sealed class AccountReceivableForm : Form
         Text = "應收帳款管理";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         var header = UiTheme.BuildHeader("應收帳款管理", "客戶應收／廠商應付帳款查詢與帳齡分析");
@@ -410,8 +408,6 @@ public sealed class AccountReceivableForm : Form
             MaximizeBox = false,
             MinimizeBox = false,
             ClientSize = new Size(420, 280),
-            AutoScaleMode = AutoScaleMode.Dpi,
-            AutoScaleDimensions = new SizeF(96F, 96F),
             StartPosition = FormStartPosition.CenterParent,
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(11F),

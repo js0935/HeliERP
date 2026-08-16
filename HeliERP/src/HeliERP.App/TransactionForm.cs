@@ -61,8 +61,6 @@ public class TransactionForm : Form
         Text = "貿易系統 - 交易作業";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         MinimumSize = new Size(1100, 660);
         UiTheme.Apply(this);
 

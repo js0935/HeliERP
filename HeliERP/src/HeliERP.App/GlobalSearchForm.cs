@@ -25,8 +25,6 @@ public sealed class GlobalSearchForm : Form
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(680, 460);
         MinimumSize = new Size(680, 400);
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
         KeyPreview = true;
         KeyDown += (s, e) =>

@@ -48,8 +48,6 @@ public sealed class PoOrderForm : Form
         Text = "採購訂貨作業";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         var header = UiTheme.BuildHeader("採購訂貨作業", "報價／訂貨／採購／詢價單輸入與列印");

@@ -36,8 +36,6 @@ public sealed class PayrollModuleForm : Form
         Text = "薪資系統 - 出缺勤 / 薪資設定 / 薪資計算";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         MinimumSize = new Size(1100, 660);
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("薪資系統", "出缺勤記錄、計薪項目設定與月薪計算"));

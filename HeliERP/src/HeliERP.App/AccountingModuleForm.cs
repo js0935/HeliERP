@@ -37,8 +37,6 @@ public sealed class AccountingModuleForm : Form
         Text = "會計系統 - 傳票 / 會計科目 / 常用分錄";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         MinimumSize = new Size(1100, 660);
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("會計系統", "會計傳票登錄、會計科目維護與常用分錄管理"));

@@ -28,8 +28,6 @@ public class ConfigForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        AutoScaleMode = AutoScaleMode.Dpi;                  // 96 DPI 設計基準：200% 螢幕下自動放大 2 倍
-        AutoScaleDimensions = new SizeF(96F, 96F);
         ClientSize = new Size(680, 410);
         UiTheme.Apply(this);
 

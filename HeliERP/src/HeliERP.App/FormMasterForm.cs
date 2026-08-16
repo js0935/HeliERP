@@ -83,8 +83,6 @@ public sealed class FormMasterForm : Form
         Text = $"{tableName} - 資料維護";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         Font = new Font("Microsoft JhengHei UI", 11F);
         UiTheme.Apply(this);
 

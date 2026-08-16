@@ -33,8 +33,6 @@ public sealed class ProductionModuleForm : Form
         Text = "生管系統 - 驗貨 / 託運作業";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         MinimumSize = new Size(1100, 660);
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("生管系統", "驗貨（品檢）與託運（出貨運輸）單據作業"));

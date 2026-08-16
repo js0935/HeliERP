@@ -52,8 +52,6 @@ public sealed class PaymentForm : Form
         Text = "收付系統 - HeliERP";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         var header = UiTheme.BuildHeader("收付系統", "收款（客戶應收沖帳）／付款（廠商應付沖帳）作業");

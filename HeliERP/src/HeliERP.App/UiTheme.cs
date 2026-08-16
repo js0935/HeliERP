@@ -76,7 +76,8 @@ public static class UiTheme
     /// 高 DPI（如 200% 縮放）下確保表單不超出螢幕工作區：
     /// 一般表單在 Load 後若尺寸超過工作區，將整張表單等比縮放並重新置中；
     /// 最大化表單則量測內容需求（上/下/左/右停靠與固定控制），超出時收斂縮放子控制。
-    /// 搭配 AutoScaleMode.Dpi 使用：控制與字體維持設計比例，僅在空間不足時縮小。
+    /// 表單採預設 Font 縮放（PerMonitorV2 下 ScaleFactor=1，維持設計邏輯尺寸與字體），
+    /// 本方法僅在空間不足時縮小，避免 AutoScaleMode.Dpi 造成的雙重放大。
     /// </summary>
     public static void ClampToScreen(Form form)
     {

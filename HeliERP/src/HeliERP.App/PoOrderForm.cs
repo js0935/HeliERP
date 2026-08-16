@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
-// 版本：1.0.0
+// 版本：1.1.0（改為查詢式版面：全螢幕清單＋彈出編輯框）
 // ════════════════════════════════════════════════════════
 using System.Data;
 using System.Drawing.Printing;
@@ -12,248 +12,435 @@ namespace HeliERP.App;
 
 /// <summary>
 /// 採購訂貨作業：報價／訂貨／採購／詢價單輸入與列印。
-/// 上區編輯單據（新增），下區為既有單據清單（檢視／刪除／列印）。
+/// 查詢式版面：頂部工具列＋篩選列，中央為單據清單，彈出式編輯框輸入。
 /// </summary>
 public sealed class PoOrderForm : Form
 {
-    private ComboBox _cmbKind = null!;
-    private TextBox _txtNo = null!;
-    private DateTimePicker _dtpDate = null!;
-    private DateTimePicker _dtpDelivery = null!;
-    private ComboBox _cmbTax = null!;
-    private ComboBox _cmbObject = null!;
-    private ComboBox _cmbDept = null!;
-    private ComboBox _cmbStaff = null!;
-    private TextBox _txtShipAddr = null!;
-    private TextBox _txtRemark = null!;
-    private DataGridView _gridDetail = null!;
-    private DataGridView _gridList = null!;
-    private TextBox _txtFilterNo = null!;
-
-    private Label _lblAmount = null!;
-    private Label _lblTax = null!;
-    private Label _lblTotal = null!;
-    private Label _lblStatus = null!;
-    private Label _lblPos = null!;   // 記錄位置（i / N）
-
-    private bool _loading;
-    private bool _viewing;   // 檢視模式：清單選取後載入，禁止儲存
-    private long _viewingKey;   // 目前檢視中單據的單據副碼（0 = 無）
-    private readonly List<ModernButton> _navButtons = new();
-
-    private static readonly string[] 課稅類別選項 = { "外加", "內含", "免稅" };
+    private readonly ComboBox _cmbKind = new();
+    private readonly DateTimePicker _dtFrom = new(), _dtTo = new();
+    private readonly TextBox _txtKeyword = new();
+    private readonly DataGridView _grid = new();
+    private readonly ToolStripStatusLabel _lblCount = new(), _lblTotal = new();
 
     public PoOrderForm()
     {
         Text = "採購訂貨作業";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
+        MinimumSize = new Size(1100, 660);
         BackColor = UiTheme.Background;
 
-        var header = UiTheme.BuildHeader("採購訂貨作業", "報價／訂貨／採購／詢價單輸入與列印");
-        header.Dock = DockStyle.Top;
-        Controls.Add(header);
+        Controls.Add(UiTheme.BuildHeader("採購訂貨作業", "報價／訂貨／採購／詢價單輸入與列印"));
 
         BuildToolbar();
-        BuildMasterCard();
-        BuildDetailCard();
-        BuildListCard();
+        BuildFilterBar();
+        BuildGrid();
         BuildStatusBar();
 
-        Load += (s, e) =>
-        {
-            try
-            {
-                _cmbKind.Items.AddRange(PoOrderService.Kinds.Select(k => k.Name).ToArray());
-                _cmbKind.SelectedIndex = 0;
-                _cmbTax.Items.AddRange(課稅類別選項);
-                _cmbTax.SelectedIndex = 0;
-                ReloadKindDependent();
-                _lblStatus.Text = "狀態: 就緒";
-            }
-            catch (Exception ex)
-            {
-                _lblStatus.Text = "狀態: 載入失敗 - " + ex.Message;
-            }
-        };
+        _cmbKind.Items.AddRange(PoOrderService.Kinds.Select(k => k.Name).ToArray());
+        _cmbKind.SelectedIndex = 0;
+        _dtFrom.Value = new DateTime(DateTime.Today.Year, 1, 1);
+        _dtTo.Value = DateTime.Today.AddYears(1);
+        LoadList();
+
+        ShortcutHelper.Enable(this, onDelete: DeleteSelected, onSearch: LoadList, onReload: LoadList);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);
     }
 
-    // ==================== 版面建構 ====================
+    // ==================== UI ====================
 
     private void BuildToolbar()
     {
         var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
         UiTheme.StyleTopBar(bar);
-
         int x = UiTheme.SpacingMd;
-        void Add(ModernButton b)
-        {
-            b.Location = new Point(x, 6);
-            b.Height = 40;
-            b.DrawShadow = false;
-            bar.Controls.Add(b);
-            x += b.Width + UiTheme.SpacingSm;
-        }
+        void Add(ModernButton b) { b.Location = new Point(x, 6); b.Height = 40; b.DrawShadow = false; bar.Controls.Add(b); x += b.Width + UiTheme.SpacingSm; }
+        void Sep() { bar.Controls.Add(new Panel { Location = new Point(x, 10), Size = new Size(2, 32), BackColor = UiTheme.Border }); x += UiTheme.SpacingSm + 2; }
 
-        var btnSearch = new ModernButton { Text = "搜尋", Width = 80, IsPrimary = false };
-        btnSearch.Click += (s, e) => FocusListSearch();
-        var btnReload = new ModernButton { Text = "重讀", Width = 80, IsPrimary = false };
-        btnReload.Click += (s, e) => { ClearEditor(); LoadList(); };
-        var btnNew = new ModernButton { Text = "新增", Width = 80, IsPrimary = false };
-        btnNew.Click += (s, e) => ClearEditor();
-        var btnSave = new ModernButton { Text = "儲存", Width = 80, IsPrimary = true };
-        btnSave.Click += (s, e) => Save();
-        var btnEdit = new ModernButton { Text = "修改", Width = 80, IsPrimary = false };
-        btnEdit.Click += (s, e) => StartEdit();
-        var btnDelete = new ModernButton { Text = "刪除", Width = 80, IsPrimary = false };
-        btnDelete.Click += (s, e) => DeleteSelected();
-        var btnPrint = new ModernButton { Text = "列印", Width = 80, IsPrimary = false };
+        var btnSearch = new ModernButton { Text = "搜尋", Width = 110 };
+        btnSearch.Click += (s, e) => { LoadList(); _txtKeyword.Focus(); };
+        var btnNew = new ModernButton { Text = "新增單據", Width = 130 };
+        btnNew.Click += (s, e) => EditBill(null);
+        var btnEdit = new ModernButton { Text = "修改", Width = 100, IsPrimary = false };
+        btnEdit.Click += (s, e) => EditBill(GetSelectedRow());
+        var btnDel = new ModernButton { Text = "刪除", Width = 100, IsPrimary = false };
+        btnDel.Click += (s, e) => DeleteSelected();
+        Sep();
+        var btnPrint = new ModernButton { Text = "列印", Width = 110, IsPrimary = false };
         btnPrint.Click += (s, e) => PrintBill();
-        var btnUndo = new ModernButton { Text = "復原", Width = 80, IsPrimary = false };
-        btnUndo.Click += (s, e) => RestoreEditor();
-        var btnExit = new ModernButton { Text = "離開", Width = 80, IsPrimary = false };
+        Sep();
+        var btnHelp = new ModernButton { Text = "說明", Width = 100, IsPrimary = false };
+        btnHelp.Click += (s, e) =>
+            MessageBox.Show(
+                "採購訂貨作業功能說明：\n" +
+                "1. 單據類別分報價／訂貨／採購／詢價；儲存後自動送審（若有核准流程）。\n" +
+                "2. 輸入貨品編號後自動帶入品名、單位與建議單價。\n" +
+                "3. 金額 = 數量 × 單價 × 折扣%；稅額依課稅類別與稅率自動計算。\n" +
+                "4. 修改會更新原單據並重新送審；列印請先選取清單中的單據。",
+                "說明", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var btnExit = new ModernButton { Text = "離開", Width = 100, IsPrimary = false };
         btnExit.Click += (s, e) => Close();
 
-        Add(btnSearch); Add(btnReload); Add(btnNew); Add(btnSave); Add(btnEdit);
-        Add(btnDelete); Add(btnPrint); Add(btnUndo); Add(btnExit);
+        Add(btnSearch); Add(btnNew); Add(btnEdit); Add(btnDel);
+        Sep();
+        Add(btnPrint);
+        Sep();
+        Add(btnHelp); Add(btnExit);
 
         Controls.Add(bar);
     }
 
-    private void BuildMasterCard()
+    private void BuildFilterBar()
     {
-        var card = new Panel { Dock = DockStyle.Top, BackColor = UiTheme.Card, Padding = new Padding(UiTheme.SpacingSm) };
-        var rows = new TableLayoutPanel
+        var bar = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = UiTheme.Background, Padding = new Padding(UiTheme.SpacingMd, 10, UiTheme.SpacingMd, 8) };
+        int x = UiTheme.SpacingMd;
+        void Field(string label, Control c, int w)
         {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            ColumnCount = 1,
-            RowCount = 3,
-            BackColor = UiTheme.Card,
-        };
-        for (int i = 0; i < 3; i++)
-            rows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            bar.Controls.Add(new Label { Text = label, Font = UiTheme.Font(10F), ForeColor = UiTheme.TextMain, AutoSize = true, Location = new Point(x, 18) });
+            x += 68;
+            c.Location = new Point(x, 12);
+            c.Width = w;
+            bar.Controls.Add(c);
+            x += w + UiTheme.SpacingLg;
+        }
 
-        rows.Controls.Add(BuildMasterRow1(), 0, 0);
-        rows.Controls.Add(BuildMasterRow2(), 0, 1);
-        rows.Controls.Add(BuildMasterRow3(), 0, 2);
+        _dtFrom.Format = _dtTo.Format = DateTimePickerFormat.Short;
+        _txtKeyword.PlaceholderText = "單據號碼";
 
-        card.Controls.Add(rows);
-        Controls.Add(card);
+        Field("類別", _cmbKind, 120);
+        Field("單號", _txtKeyword, 200);
+        Field("日期從", _dtFrom, 110);
+        Field("至", _dtTo, 110);
+        bar.Controls.Add(new Label { Text = "（單號留空 = 全部）", Font = UiTheme.Font(9F), ForeColor = UiTheme.TextFaint, AutoSize = true, Location = new Point(x + 6, 18) });
+        Controls.Add(bar);
     }
 
-    private TableLayoutPanel BuildMasterRow1()
+    private void BuildGrid()
     {
-        var panel = NewMasterRow();
-        AddPair(panel, "單據類別", _cmbKind = new ComboBox { Width = 100, DropDownStyle = ComboBoxStyle.DropDownList }, 0);
-        AddPair(panel, "單據號碼", _txtNo = new TextBox { Width = 110, ReadOnly = true, BackColor = UiTheme.BorderLight }, 1);
-        AddPair(panel, "交易日期", _dtpDate = new DateTimePicker { Width = 130, Format = DateTimePickerFormat.Short }, 2);
-        AddPair(panel, "交貨日期", _dtpDelivery = new DateTimePicker { Width = 130, Format = DateTimePickerFormat.Short }, 3);
-        AddPair(panel, "課稅類別", _cmbTax = new ComboBox { Width = 90, DropDownStyle = ComboBoxStyle.DropDownList }, 4);
-        _cmbKind.SelectedIndexChanged += (s, e) => ReloadKindDependent();
-        return panel;
+        _grid.Dock = DockStyle.Fill;
+        _grid.ReadOnly = true;
+        _grid.AllowUserToAddRows = false;
+        _grid.AllowUserToDeleteRows = false;
+        _grid.MultiSelect = false;
+        _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        _grid.RowHeadersVisible = false;
+        UiTheme.StyleDataGridView(_grid);
+        _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) EditBill(GetSelectedRow()); };
+        Controls.Add(_grid);
     }
 
-    private TableLayoutPanel BuildMasterRow2()
+    private void BuildStatusBar()
     {
-        var panel = NewMasterRow();
-        AddPair(panel, "交易對象", _cmbObject = new ComboBox { Width = 230, DropDownStyle = ComboBoxStyle.DropDownList }, 0);
-        UiTheme.AutoWiden(_cmbObject);
-        AddPair(panel, "部門", _cmbDept = new ComboBox { Width = 130, DropDownStyle = ComboBoxStyle.DropDownList }, 1);
-        UiTheme.AutoWiden(_cmbDept);
-        AddPair(panel, "員工", _cmbStaff = new ComboBox { Width = 130, DropDownStyle = ComboBoxStyle.DropDownList }, 2);
-        UiTheme.AutoWiden(_cmbStaff);
-        AddPair(panel, "送貨地址", _txtShipAddr = new TextBox { Width = 320 }, 3);
-        return panel;
+        var bar = new StatusStrip { SizingGrip = false, BackColor = UiTheme.Card, Padding = new Padding(12, 2, 8, 2) };
+        _lblCount.Text = "共 0 筆";
+        _lblTotal.Text = "";
+        bar.Items.Add(_lblCount);
+        bar.Items.Add(new ToolStripStatusLabel("  |  "));
+        bar.Items.Add(_lblTotal);
+        Controls.Add(bar);
     }
 
-    private TableLayoutPanel BuildMasterRow3()
+    // ==================== 資料 ====================
+
+    private DataRow? GetSelectedRow()
     {
-        var panel = NewMasterRow();
-        AddPair(panel, "備註", _txtRemark = new TextBox { Width = 360 }, 0);
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        var lblAmountT = new Label { Text = "合計金額：", Anchor = AnchorStyles.Right, Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingXs, 0) };
-        UiTheme.StyleLabel(lblAmountT);
-        _lblAmount = new Label { Text = "0", Anchor = AnchorStyles.Left, AutoSize = true, Margin = new Padding(0, UiTheme.SpacingSm, UiTheme.SpacingLg, 0), ForeColor = UiTheme.Primary, Font = UiTheme.Font(11F, FontStyle.Bold) };
-        var lblTaxT = new Label { Text = "稅額：", Anchor = AnchorStyles.Right, Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingXs, 0) };
-        UiTheme.StyleLabel(lblTaxT);
-        _lblTax = new Label { Text = "0", Anchor = AnchorStyles.Left, AutoSize = true, Margin = new Padding(0, UiTheme.SpacingSm, UiTheme.SpacingLg, 0), ForeColor = UiTheme.Primary, Font = UiTheme.Font(11F, FontStyle.Bold) };
-        var lblTotalT = new Label { Text = "總計：", Anchor = AnchorStyles.Right, Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingXs, 0) };
-        UiTheme.StyleLabel(lblTotalT);
-        _lblTotal = new Label { Text = "0", Anchor = AnchorStyles.Left, AutoSize = true, Margin = new Padding(0, UiTheme.SpacingSm, 0, 0), ForeColor = UiTheme.Danger, Font = UiTheme.Font(12F, FontStyle.Bold) };
-        panel.Controls.Add(lblAmountT, 2, 0);
-        panel.Controls.Add(_lblAmount, 3, 0);
-        panel.Controls.Add(lblTaxT, 4, 0);
-        panel.Controls.Add(_lblTax, 5, 0);
-        panel.Controls.Add(lblTotalT, 6, 0);
-        panel.Controls.Add(_lblTotal, 7, 0);
-        return panel;
+        if (_grid.CurrentRow is null || _grid.CurrentRow.DataBoundItem is not DataRowView drv)
+            return null;
+        return drv.Row;
     }
 
-    private static TableLayoutPanel NewMasterRow()
+    private void LoadList()
     {
-        var panel = new TableLayoutPanel
+        if (_cmbKind.SelectedItem is not string kindName) return;
+        string filter = _txtKeyword.Text.Trim();
+        string from = _dtFrom.Value.ToString("yyyy-MM-dd 00:00:00");
+        string to = _dtTo.Value.ToString("yyyy-MM-dd 23:59:59");
+
+        var dt = PoOrderService.LoadPoList(kindName, filter, from, to);
+        _grid.DataSource = dt;
+        _grid.Columns["單據副碼"].Visible = false;
+        _grid.Columns["交易對象"].Visible = false;
+        if (_grid.Columns.Count > 0)
         {
-            Dock = DockStyle.Fill,
-            ColumnCount = 8,
-            RowCount = 1,
-            AutoSize = true,
-            BackColor = UiTheme.Card,
-        };
-        for (int i = 0; i < 8; i++)
-            panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        return panel;
+            _grid.Columns["交易單號"].Width = 120;
+            _grid.Columns["交易日期"].Width = 110;
+            _grid.Columns["交貨日期"].Width = 110;
+            _grid.Columns["對象名稱"].Width = 130;
+            _grid.Columns["合計金額"].Width = 110;
+            _grid.Columns["合計金額"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            _grid.Columns["合計金額"].DefaultCellStyle.Format = "N2";
+            _grid.Columns["營業稅"].Width = 90;
+            _grid.Columns["營業稅"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            _grid.Columns["營業稅"].DefaultCellStyle.Format = "N2";
+            _grid.Columns["總計金額"].Width = 110;
+            _grid.Columns["總計金額"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            _grid.Columns["總計金額"].DefaultCellStyle.Format = "N2";
+            _grid.Columns["明細筆數"].HeaderText = "筆數";
+            _grid.Columns["明細筆數"].Width = 55;
+            _grid.Columns["未交完數"].HeaderText = "未交";
+            _grid.Columns["未交完數"].Width = 60;
+            _grid.Columns["製單"].Width = 80;
+        }
+        _lblCount.Text = $"共 {dt.Rows.Count} 筆";
+        var total = dt.AsEnumerable().Sum(r => Convert.ToDecimal(r["總計金額"]));
+        _lblTotal.Text = $"總計金額合計：{total:N0}";
     }
 
-    private void AddPair(TableLayoutPanel panel, string label, Control ctrl, int col)
+    private void EditBill(DataRow? row)
     {
-        var lbl = new Label { Text = label + "：", Anchor = AnchorStyles.Right, Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingXs, 0) };
-        UiTheme.StyleLabel(lbl);
-        ctrl.Dock = DockStyle.Fill;
-        ctrl.Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingLg, UiTheme.SpacingXs);
-        panel.Controls.Add(lbl, col * 2, 0);
-        panel.Controls.Add(ctrl, col * 2 + 1, 0);
+        long? 副碼 = null;
+        if (row is not null)
+            副碼 = Convert.ToInt64(row["單據副碼"]);
+        var result = PoBillEditDialog.Show(this, 副碼);
+        if (result is null)
+            return;
+        try
+        {
+            var req = new PoOrderService.PoBillRequest
+            {
+                單據副碼 = 副碼,
+                單據類別 = result.單據類別,
+                交易日期 = result.交易日期,
+                交貨日期 = result.交貨日期,
+                交易對象 = result.交易對象,
+                部門編號 = result.部門編號,
+                員工編號 = result.員工編號,
+                送貨地址 = result.送貨地址,
+                課稅類別 = result.課稅類別,
+                備註 = result.備註,
+                明細 = result.明細,
+            };
+            var saved = PoOrderService.SavePoBill(req);
+            decimal 合計 = result.明細.Sum(d => PoOrderService.CalcDetailAmount(d));
+            var flowSeq = ApprovalService.Submit(req.單據類別, saved.交易單號, 合計,
+                AuditService.CurrentUser, req.備註);
+            MessageBox.Show($"單據「{saved.交易單號}」已儲存。"
+                + (flowSeq is null ? "" : "\n已自動送審（待核准）。"),
+                "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            LoadList();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"儲存失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
-    private void BuildDetailCard()
+    private void DeleteSelected()
     {
-        var card = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.Background, Padding = new Padding(UiTheme.SpacingLg, UiTheme.SpacingXs, UiTheme.SpacingLg, UiTheme.SpacingSm) };
-
-        var bar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = UiTheme.Card };
-        var lbl = new Label
+        var row = GetSelectedRow();
+        if (row is null)
         {
-            Text = "單據明細",
-            AutoSize = true,
-            Location = new Point(12, 10),
-            ForeColor = UiTheme.Primary,
-            Font = UiTheme.Font(11F, FontStyle.Bold),
-        };
-        bar.Controls.Add(lbl);
-        var btnAdd = new ModernButton { Text = "新增明細列", Width = 110, Height = 30, IsPrimary = false };
-        btnAdd.Location = new Point(100, 5);
-        btnAdd.Click += (s, e) => AddDetailRow();
-        bar.Controls.Add(btnAdd);
-        var btnRemove = new ModernButton { Text = "刪除明細列", Width = 110, Height = 30, IsPrimary = false };
-        btnRemove.Location = new Point(220, 5);
-        btnRemove.Click += (s, e) => RemoveDetailRow();
-        bar.Controls.Add(btnRemove);
-        card.Controls.Add(bar);
-
-        _gridDetail = new DataGridView
+            MessageBox.Show("請先於清單選取一筆單據。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        string 單號 = Convert.ToString(row["交易單號"]) ?? "";
+        long 副碼 = Convert.ToInt64(row["單據副碼"]);
+        var confirm = MessageBox.Show($"確定刪除單據「{單號}」？",
+            "刪除確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes) return;
+        try
         {
-            Dock = DockStyle.Fill,
-            AllowUserToAddRows = false,
-            AllowUserToDeleteRows = false,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
-            SelectionMode = DataGridViewSelectionMode.CellSelect,
+            PoOrderService.DeletePoBill(副碼);
+            MessageBox.Show($"單據「{單號}」已刪除。", "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            LoadList();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"刪除失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // ==================== 列印 ====================
+
+    private static string ReportDir => ReportPrintService.RepDirectory;
+
+    private void PrintBill()
+    {
+        var row = GetSelectedRow();
+        if (row is null)
+        {
+            MessageBox.Show("請先於清單選取一筆單據，再按列印。", "列印", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        long 副碼 = Convert.ToInt64(row["單據副碼"]);
+        string kindName = Convert.ToString(row["單據類別"]) ?? "報價";
+        var kind = PoOrderService.GetKind(kindName);
+        string rtmPath = Path.Combine(ReportDir, kind.ReportFile);
+        if (!File.Exists(rtmPath))
+        {
+            MessageBox.Show($"找不到報表檔：{rtmPath}", "列印", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        Tpf0Object root;
+        try
+        {
+            root = Tpf0Reader.Parse(File.ReadAllBytes(rtmPath));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"報表檔解析失敗：{ex.Message}", "列印", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        var report = RtmLoader.Load(root);
+        var data = BuildRtmData(副碼);
+        var billNo = data.Master.TryGetValue("ppDBPipeline1|交易單號", out var no) ? Convert.ToString(no) ?? "" : 副碼.ToString();
+
+        var state = new RtmRenderState();
+        using var renderer = new RtmRenderer(report, data);
+        using var doc = new PrintDocument
+        {
+            DocumentName = $"{kind.Name}單-{billNo}",
         };
-        UiTheme.StyleDataGridView(_gridDetail);
+        doc.DefaultPageSettings.PaperSize = new PaperSize("A4",
+            (int)Math.Round(report.MmPaperWidth / 25.4 * 100),
+            (int)Math.Round(report.MmPaperHeight / 25.4 * 100));
+        doc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+        doc.PrintPage += (s, e) =>
+        {
+            try
+            {
+                e.HasMorePages = renderer.RenderPage(e.Graphics!, e.PageBounds, state);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"列印發生錯誤：{ex.Message}", "列印", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                e.HasMorePages = false;
+            }
+        };
+
+        using var dlg = new PrintPreviewDialog
+        {
+            Document = doc,
+            Width = 960,
+            Height = 720,
+            StartPosition = FormStartPosition.CenterScreen,
+        };
+        dlg.ShowDialog(this);
+    }
+
+    /// <summary>建立報表資料：主檔（ppDBPipeline1）+ 公司（plCompany）+ 明細（ppDBPipeline2）。</summary>
+    private static RtmData BuildRtmData(long 副碼)
+    {
+        var data = new RtmData { DetailPipeline = "ppDBPipeline2" };
+
+        var dt = PoOrderService.LoadPoMaster(副碼);
+        if (dt.Rows.Count > 0)
+        {
+            var row = dt.Rows[0];
+            foreach (DataColumn col in dt.Columns)
+                data.Master[$"ppDBPipeline1|{col.ColumnName}"] = row[col];
+        }
+
+        ARService.FillCompany(data);
+
+        var detailDt = PoOrderService.LoadPoPrintDetails(副碼);
+        foreach (DataRow dr in detailDt.Rows)
+        {
+            var d = new Dictionary<string, object?>();
+            foreach (DataColumn col in detailDt.Columns)
+                d[col.ColumnName] = dr[col];
+            data.Detail.Add(d);
+        }
+        return data;
+    }
+}
+
+// ==================== 彈出式編輯框 ====================
+
+/// <summary>採訂單編輯框：新增／修改／檢視（唯讀）。</summary>
+public sealed class PoBillEditDialog : Form
+{
+    private readonly ComboBox _cmbKind = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly TextBox _txtNo = new() { ReadOnly = true, BackColor = UiTheme.BorderLight };
+    private readonly DateTimePicker _dtpDate = new() { Format = DateTimePickerFormat.Short };
+    private readonly DateTimePicker _dtpDelivery = new() { Format = DateTimePickerFormat.Short };
+    private readonly ComboBox _cmbTax = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _cmbObject = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _cmbDept = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _cmbStaff = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly TextBox _txtShipAddr = new();
+    private readonly TextBox _txtRemark = new();
+    private readonly DataGridView _gridDetail = new();
+    private readonly Label _lblAmount = new() { AutoSize = true, ForeColor = UiTheme.Primary, Font = UiTheme.Font(11F, FontStyle.Bold) };
+    private readonly Label _lblTax = new() { AutoSize = true, ForeColor = UiTheme.Primary, Font = UiTheme.Font(11F, FontStyle.Bold) };
+    private readonly Label _lblTotal = new() { AutoSize = true, ForeColor = UiTheme.Danger, Font = UiTheme.Font(12F, FontStyle.Bold) };
+    private readonly bool _readOnly;
+    private readonly long? _副碼;
+    private bool _loading;
+
+    private static readonly string[] 課稅類別選項 = { "外加", "內含", "免稅" };
+
+    public sealed record Result(
+        string 單據類別, DateTime 交易日期, DateTime 交貨日期, string 課稅類別,
+        string 交易對象, string 部門編號, string 員工編號, string 送貨地址, string 備註,
+        List<PoOrderService.PoLine> 明細);
+
+    private PoBillEditDialog(long? 副碼, bool readOnly)
+    {
+        _副碼 = 副碼;
+        _readOnly = readOnly;
+        Text = readOnly ? "檢視單據" : (副碼 is null ? "新增單據" : "修改單據");
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = MinimizeBox = false;
+        StartPosition = FormStartPosition.CenterParent;
+        BackColor = UiTheme.Background;
+        Font = UiTheme.Font(10F);
+        ClientSize = new Size(1040, 660);
+
+        foreach (var k in PoOrderService.Kinds)
+            _cmbKind.Items.Add(k.Name);
+        _cmbTax.Items.AddRange(課稅類別選項);
+
+        int y = 18;
+        void Field(string label, Control c, int x, int w = 0)
+        {
+            Controls.Add(new Label { Text = label + "：", Font = UiTheme.Font(9.5F), ForeColor = UiTheme.TextMain, AutoSize = true, Location = new Point(x, y + 4) });
+            c.Location = new Point(x + 76, y);
+            if (w > 0) c.Width = w;
+            Controls.Add(c);
+        }
+
+        _txtNo.Width = 140;
+        _cmbKind.Width = 110;
+        _cmbTax.Width = 80;
+        _dtpDate.Width = 120;
+        _dtpDelivery.Width = 120;
+        _cmbObject.Width = 220;
+        _cmbDept.Width = 120;
+        _cmbStaff.Width = 120;
+        Field("單據類別", _cmbKind, 20);
+        Field("單據號碼", _txtNo, 190);
+        Field("交易日期", _dtpDate, 360);
+        Field("交貨日期", _dtpDelivery, 540);
+        Field("課稅類別", _cmbTax, 720);
+        y = 56;
+        Field("交易對象", _cmbObject, 20);
+        Field("部門", _cmbDept, 320);
+        Field("員工", _cmbStaff, 520);
+        Field("送貨地址", _txtShipAddr, 700, 300);
+        y = 94;
+        Field("備註", _txtRemark, 20, 960);
+
+        _cmbKind.SelectedIndexChanged += (s, e) =>
+        {
+            if (_loading || _readOnly || _副碼 is not null) return;
+            LoadObjectCombo();
+            _txtNo.Text = PoOrderService.PreviewPoNo(_cmbKind.SelectedItem?.ToString() ?? "報價");
+        };
+
+        _gridDetail.Location = new Point(20, 134);
+        _gridDetail.Size = new Size(1000, 390);
+        _gridDetail.RowHeadersVisible = false;
+        _gridDetail.AllowUserToAddRows = _readOnly ? false : true;
+        _gridDetail.AllowUserToDeleteRows = _readOnly ? false : true;
+        _gridDetail.MultiSelect = false;
+        _gridDetail.SelectionMode = DataGridViewSelectionMode.CellSelect;
         _gridDetail.RowTemplate.Height = 30;
-
+        UiTheme.StyleDataGridView(_gridDetail);
         _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "貨品編號", HeaderText = "貨品編號", Width = 110 });
         _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "品名", HeaderText = "品名", Width = 170, ReadOnly = true });
         _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "倉庫", HeaderText = "倉庫", Width = 55 });
@@ -263,163 +450,188 @@ public sealed class PoOrderForm : Form
         _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "單價", HeaderText = "單價", Width = 90 });
         _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "折扣", HeaderText = "折扣", Width = 60 });
         _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "金額", HeaderText = "金額", Width = 100, ReadOnly = true });
-        _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "附註說明", HeaderText = "附註說明", Width = 160 });
+        _gridDetail.Columns.Add(new DataGridViewTextBoxColumn { Name = "附註說明", HeaderText = "附註說明", Width = 140 });
         _gridDetail.Columns["貨品編號"].Frozen = true;
-
         _gridDetail.CellEndEdit += OnDetailCellEndEdit;
-        card.Controls.Add(_gridDetail);
-        Controls.Add(card);
+
+        var lblAmountT = new Label { Text = "合計金額：", Font = UiTheme.Font(9.5F), ForeColor = UiTheme.TextMain, AutoSize = true, Location = new Point(520, 536) };
+        _lblAmount.Location = new Point(592, 536);
+        var lblTaxT = new Label { Text = "稅額：", Font = UiTheme.Font(9.5F), ForeColor = UiTheme.TextMain, AutoSize = true, Location = new Point(680, 536) };
+        _lblTax.Location = new Point(728, 536);
+        var lblTotalT = new Label { Text = "總計：", Font = UiTheme.Font(9.5F), ForeColor = UiTheme.TextMain, AutoSize = true, Location = new Point(810, 536) };
+        _lblTotal.Location = new Point(858, 534);
+        _lblAmount.Text = "0";
+        _lblTax.Text = "0";
+        _lblTotal.Text = "0";
+
+        var btnOk = new ModernButton { Text = readOnly ? "關閉" : "確定", Size = new Size(96, 40), Location = new Point(1040 - 250, 600), IsPrimary = true };
+        var btnCancel = new ModernButton { Text = "取消", Size = new Size(96, 40), Location = new Point(1040 - 140, 600), IsPrimary = false, DrawShadow = false };
+        btnOk.Click += (s, e) => Finish();
+        btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
+        btnOk.Enabled = !_readOnly;
+
+        Controls.AddRange(new Control[] {
+            _gridDetail, lblAmountT, _lblAmount, lblTaxT, _lblTax, lblTotalT, _lblTotal,
+            btnOk, btnCancel,
+        });
+
+        UiTheme.ScaleForDpi(this);
+        UiTheme.ClampToScreen(this);
     }
 
-    private void BuildListCard()
+    /// <summary>新增（副碼 null）或修改模式。</summary>
+    public static Result? Show(Form owner, long? 副碼)
     {
-        var card = new Panel { Dock = DockStyle.Bottom, Height = 210, BackColor = UiTheme.Background, Padding = new Padding(UiTheme.SpacingLg, UiTheme.SpacingXs, UiTheme.SpacingLg, UiTheme.SpacingSm) };
-
-        var bar = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = UiTheme.Card };
-        var lbl = new Label
+        using var dlg = new PoBillEditDialog(副碼, readOnly: false);
+        dlg._loading = true;
+        if (副碼 is null)
         {
-            Text = "單據清單",
-            AutoSize = true,
-            Location = new Point(12, 9),
-            ForeColor = UiTheme.Primary,
-            Font = UiTheme.Font(11F, FontStyle.Bold),
-        };
-        bar.Controls.Add(lbl);
-        var lblFilter = new Label { Text = "單號：", AutoSize = true, Location = new Point(110, 11), ForeColor = UiTheme.TextSub, Font = UiTheme.Font(10F) };
-        bar.Controls.Add(lblFilter);
-        _txtFilterNo = new TextBox { Width = 120, Location = new Point(152, 7) };
-        bar.Controls.Add(_txtFilterNo);
-        var btnFilter = new ModernButton { Text = "查詢", Width = 70, Height = 26, IsPrimary = false };
-        btnFilter.Location = new Point(282, 5);
-        btnFilter.Click += (s, e) => LoadList();
-        bar.Controls.Add(btnFilter);
-
-        void AddNav(string text, int delta, bool extreme)
-        {
-            var b = new ModernButton { Text = text, Width = 56, Height = 26, IsPrimary = false };
-            b.Click += (s, e) => MoveBillSelection(delta, extreme);
-            bar.Controls.Add(b);
-            _navButtons.Add(b);
+            dlg._cmbKind.SelectedIndex = 0;
+            dlg.LoadObjectCombo();
+            dlg._txtNo.Text = PoOrderService.PreviewPoNo(dlg._cmbKind.SelectedItem?.ToString() ?? "報價");
+            dlg._cmbTax.SelectedIndex = 0;
         }
-        AddNav("首筆", 0, true);
-        AddNav("上筆", -1, false);
-        AddNav("下筆", 1, false);
-        AddNav("尾筆", 1, true);
-        bar.Resize += (s, e) =>
+        else
         {
-            int right = bar.ClientSize.Width - 8;
-            for (int i = _navButtons.Count - 1; i >= 0; i--)
+            var master = PoOrderService.LoadPoMaster(副碼.Value);
+            if (master.Rows.Count == 0)
             {
-                var b = _navButtons[i];
-                b.Location = new Point(right - b.Width, 5);
-                right -= b.Width + 8;
+                MessageBox.Show("找不到該單據，可能已被刪除。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return null;
             }
-        };
-        card.Controls.Add(bar);
-
-        _gridList = new DataGridView
-        {
-            Dock = DockStyle.Fill,
-            ReadOnly = true,
-            AllowUserToAddRows = false,
-            AllowUserToDeleteRows = false,
-            MultiSelect = false,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-        };
-        UiTheme.StyleDataGridView(_gridList);
-        _gridList.RowTemplate.Height = 28;
-        _gridList.SelectionChanged += (s, e) => UpdateListPos();
-        card.Controls.Add(_gridList);
-        Controls.Add(card);
+            var m = master.Rows[0];
+            dlg._cmbKind.SelectedItem = Str(m["單據類別"]);
+            dlg.LoadObjectCombo();
+            dlg._txtNo.Text = Str(m["交易單號"]);
+            if (DateTime.TryParse(Str(m["交易日期"]), out var d)) dlg._dtpDate.Value = d;
+            if (DateTime.TryParse(Str(m["交貨日期"]), out var dl)) dlg._dtpDelivery.Value = dl;
+            dlg._cmbTax.SelectedItem = Str(m["課稅類別"]).Length > 0 ? Str(m["課稅類別"]) : "外加";
+            SelectComboValue(dlg._cmbObject, Str(m["交易對象"]));
+            SelectComboValue(dlg._cmbDept, Str(m["部門編號"]));
+            SelectComboValue(dlg._cmbStaff, Str(m["員工編號"]));
+            dlg._txtShipAddr.Text = Str(m["送貨地址"]);
+            dlg._txtRemark.Text = Str(m["備註"]);
+            dlg.LoadDetails(副碼.Value);
+        }
+        dlg._loading = false;
+        return dlg.ShowDialog(owner) == DialogResult.OK ? dlg.BuildResult() : null;
     }
 
-    private void BuildStatusBar()
+    /// <summary>檢視模式（唯讀）。</summary>
+    public static void ShowView(Form owner, long 副碼)
     {
-        var bar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = UiTheme.BorderLight };
-        _lblStatus = new Label
+        using var dlg = new PoBillEditDialog(副碼, readOnly: true);
+        var master = PoOrderService.LoadPoMaster(副碼);
+        if (master.Rows.Count == 0)
         {
-            Text = "狀態: 就緒",
-            AutoSize = true,
-            Location = new Point(12, 5),
-            ForeColor = UiTheme.TextSub,
-            Font = UiTheme.Font(10.5F, FontStyle.Bold),
-        };
-        bar.Controls.Add(_lblStatus);
-        _lblPos = new Label
-        {
-            Text = "記錄: 0/0",
-            AutoSize = true,
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(0, 5),
-            ForeColor = UiTheme.TextSub,
-            Font = UiTheme.Font(10.5F, FontStyle.Bold),
-        };
-        bar.Controls.Add(_lblPos);
-        Controls.Add(bar);
+            MessageBox.Show("找不到該單據，可能已被刪除。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        var m = master.Rows[0];
+        dlg._cmbKind.SelectedItem = Str(m["單據類別"]);
+        dlg.LoadObjectCombo();
+        dlg._txtNo.Text = Str(m["交易單號"]);
+        if (DateTime.TryParse(Str(m["交易日期"]), out var d)) dlg._dtpDate.Value = d;
+        if (DateTime.TryParse(Str(m["交貨日期"]), out var dl)) dlg._dtpDelivery.Value = dl;
+        dlg._cmbTax.SelectedItem = Str(m["課稅類別"]).Length > 0 ? Str(m["課稅類別"]) : "外加";
+        SelectComboValue(dlg._cmbObject, Str(m["交易對象"]));
+        SelectComboValue(dlg._cmbDept, Str(m["部門編號"]));
+        SelectComboValue(dlg._cmbStaff, Str(m["員工編號"]));
+        dlg._txtShipAddr.Text = Str(m["送貨地址"]);
+        dlg._txtRemark.Text = Str(m["備註"]);
+        dlg.LoadDetails(副碼);
+        dlg.ShowDialog(owner);
     }
 
-    // ==================== 類別相依 ====================
-
-    private void ReloadKindDependent()
+    private void LoadObjectCombo()
     {
-        if (_cmbKind.SelectedItem is not string kindName) return;
         _loading = true;
-
-        var obj = PoOrderService.LoadObjectCombo(kindName);
+        var obj = PoOrderService.LoadObjectCombo(_cmbKind.SelectedItem?.ToString() ?? "報價");
         _cmbObject.DataSource = obj;
         _cmbObject.DisplayMember = "公司簡稱";
         _cmbObject.ValueMember = "客廠編號";
-
-        var dept = PoOrderService.LoadDepartmentCombo();
-        _cmbDept.DataSource = dept;
-        _cmbDept.DisplayMember = "部門名稱";
-        _cmbDept.ValueMember = "部門編號";
-
-        var staff = TradeService.LoadStaffCombo();
-        _cmbStaff.DataSource = staff;
-        _cmbStaff.DisplayMember = "員工姓名";
-        _cmbStaff.ValueMember = "員工編號";
-
         _loading = false;
-        ClearEditor();
-        LoadList();
     }
 
-    // ==================== 明細編輯 ====================
-
-    private void AddDetailRow()
+    private void LoadDetails(long 副碼)
     {
-        if (_viewing) return;
-        int i = _gridDetail.Rows.Add();
-        var row = _gridDetail.Rows[i];
-        row.Cells["倉庫"].Value = TradeService.LoadParams().常用倉庫;
-        row.Cells["折扣"].Value = 100m;
-        row.Cells["交易數量"].Value = 0m;
-        _gridDetail.CurrentCell = row.Cells["貨品編號"];
-    }
-
-    private void RemoveDetailRow()
-    {
-        if (_viewing) return;
-        if (_gridDetail.SelectedCells.Count == 0) return;
-        int i = _gridDetail.SelectedCells[0].RowIndex;
-        if (i < 0 || i >= _gridDetail.Rows.Count) return;
-        _gridDetail.Rows.RemoveAt(i);
+        var dt = PoOrderService.LoadPoDetails(副碼);
+        _gridDetail.Rows.Clear();
+        foreach (DataRow r in dt.Rows)
+        {
+            int i = _gridDetail.Rows.Add();
+            var gr = _gridDetail.Rows[i];
+            gr.Cells["貨品編號"].Value = Str(r["貨品編號"]);
+            gr.Cells["品名"].Value = Str(r["品名"]);
+            gr.Cells["倉庫"].Value = Str(r["倉庫編號"]);
+            gr.Cells["數量"].Value = r["數量"];
+            gr.Cells["交易數量"].Value = r["交易數量"];
+            gr.Cells["單位"].Value = Str(r["單位"]);
+            gr.Cells["單價"].Value = r["單價"];
+            gr.Cells["折扣"].Value = r["折扣"];
+            gr.Cells["金額"].Value = r["金額"];
+            gr.Cells["附註說明"].Value = Str(r["附註說明"]);
+        }
         RecalcTotals();
+    }
+
+    private Result BuildResult()
+    {
+        var lines = new List<PoOrderService.PoLine>();
+        foreach (DataGridViewRow r in _gridDetail.Rows)
+        {
+            if (r.IsNewRow) continue;
+            var code = Convert.ToString(r.Cells["貨品編號"].Value)?.Trim() ?? "";
+            if (code.Length == 0) continue;
+            lines.Add(new PoOrderService.PoLine
+            {
+                貨品編號 = code,
+                倉庫編號 = Convert.ToString(r.Cells["倉庫"].Value)?.Trim() ?? "",
+                數量 = Dec(r.Cells["數量"].Value),
+                單位 = Convert.ToString(r.Cells["單位"].Value)?.Trim() ?? "",
+                單價 = Dec(r.Cells["單價"].Value),
+                折扣 = Dec(r.Cells["折扣"].Value) == 0 ? 100m : Dec(r.Cells["折扣"].Value),
+                附註說明 = Convert.ToString(r.Cells["附註說明"].Value)?.Trim() ?? "",
+            });
+        }
+        return new Result(
+            _cmbKind.SelectedItem?.ToString() ?? "報價",
+            _dtpDate.Value.Date,
+            _dtpDelivery.Value.Date,
+            _cmbTax.SelectedItem?.ToString() ?? "外加",
+            _cmbObject.SelectedValue is string o ? o : "",
+            _cmbDept.SelectedValue is string dep ? dep : "",
+            _cmbStaff.SelectedValue is string st ? st : "",
+            _txtShipAddr.Text.Trim(),
+            _txtRemark.Text.Trim(),
+            lines);
+    }
+
+    private void Finish()
+    {
+        if (_cmbObject.SelectedValue is not string o || o.Length == 0)
+        {
+            MessageBox.Show(this, "請選擇交易對象。", "請修正", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        if (BuildResult().明細.Count == 0)
+        {
+            MessageBox.Show(this, "請至少輸入一筆明細。", "請修正", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        DialogResult = DialogResult.OK;
     }
 
     private void OnDetailCellEndEdit(object? sender, DataGridViewCellEventArgs e)
     {
-        if (_loading || _viewing || e.RowIndex < 0 || e.RowIndex >= _gridDetail.Rows.Count) return;
+        if (_loading || _readOnly || e.RowIndex < 0 || e.RowIndex >= _gridDetail.Rows.Count) return;
         var row = _gridDetail.Rows[e.RowIndex];
         if (row.IsNewRow) return;
         var col = _gridDetail.Columns[e.ColumnIndex].Name;
 
         if (col == "貨品編號")
         {
-            var code = (row.Cells["貨品編號"].Value as string ?? "").Trim();
+            var code = Convert.ToString(row.Cells["貨品編號"].Value)?.Trim() ?? "";
             if (code.Length == 0) return;
             var g = TradeService.LookupGoodsInfo(code);
             if (g is null)
@@ -457,7 +669,7 @@ public sealed class PoOrderForm : Form
         RecalcTotals();
     }
 
-    private decimal PickUnitPrice(Dictionary<string, object?> g)
+    private static decimal PickUnitPrice(Dictionary<string, object?> g)
     {
         decimal 售價A = Dec(g.TryGetValue("售價A", out var a) ? a : null);
         if (售價A > 0) return 售價A;
@@ -473,7 +685,7 @@ public sealed class PoOrderForm : Form
             if (r.IsNewRow) continue;
             合計 += Dec(r.Cells["金額"].Value);
         }
-        var kind = PoOrderService.GetKind(_cmbKind.SelectedItem as string ?? "報價");
+        var kind = PoOrderService.GetKind(_cmbKind.SelectedItem?.ToString() ?? "報價");
         bool 免稅 = _cmbTax.SelectedItem is string t && t.Contains("免");
         decimal 稅率 = kind.TaxSource == "進項"
             ? TradeService.LoadParams().進項稅率
@@ -482,217 +694,6 @@ public sealed class PoOrderForm : Form
         _lblAmount.Text = 合計.ToString("N2");
         _lblTax.Text = 稅.ToString("N2");
         _lblTotal.Text = (合計 + 稅).ToString("N2");
-    }
-
-    // ==================== 存檔 / 檢視 / 刪除 ====================
-
-    private void Save()
-    {
-        if (_viewing)
-        {
-            MessageBox.Show("目前為檢視模式（已載入既有單據），請按「重讀」開始新單。",
-                "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        if (_cmbObject.SelectedValue is not string 對象 || 對象.Length == 0)
-        {
-            MessageBox.Show("請選擇交易對象。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        var req = new PoOrderService.PoBillRequest
-        {
-            單據副碼 = _viewingKey == 0 ? null : _viewingKey,
-            單據類別 = _cmbKind.SelectedItem as string ?? "報價",
-            交易日期 = _dtpDate.Value.Date,
-            交貨日期 = _dtpDelivery.Value.Date,
-            交易對象 = 對象,
-            部門編號 = _cmbDept.SelectedValue as string ?? "",
-            員工編號 = _cmbStaff.SelectedValue as string ?? "",
-            送貨地址 = _txtShipAddr.Text.Trim(),
-            課稅類別 = _cmbTax.SelectedItem as string ?? "外加",
-            備註 = _txtRemark.Text.Trim(),
-        };
-        foreach (DataGridViewRow r in _gridDetail.Rows)
-        {
-            if (r.IsNewRow) continue;
-            var code = (r.Cells["貨品編號"].Value as string ?? "").Trim();
-            if (code.Length == 0) continue;
-            req.明細.Add(new PoOrderService.PoLine
-            {
-                貨品編號 = code,
-                倉庫編號 = (r.Cells["倉庫"].Value as string ?? "").Trim(),
-                數量 = Dec(r.Cells["數量"].Value),
-                單位 = (r.Cells["單位"].Value as string ?? "").Trim(),
-                單價 = Dec(r.Cells["單價"].Value),
-                折扣 = Dec(r.Cells["折扣"].Value),
-                附註說明 = (r.Cells["附註說明"].Value as string ?? "").Trim(),
-            });
-        }
-        try
-        {
-            long editedKey = _viewingKey;
-            var result = PoOrderService.SavePoBill(req);
-            decimal 合計 = req.明細.Sum(d => PoOrderService.CalcDetailAmount(d));
-            var flowSeq = ApprovalService.Submit(req.單據類別, result.交易單號, 合計,
-                AuditService.CurrentUser, req.備註);
-            MessageBox.Show($"單據「{result.交易單號}」已儲存。"
-                + (flowSeq is null ? "" : "\n已自動送審（待核准）。"),
-                "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            if (editedKey > 0)
-            {
-                LoadList();
-                LoadBillByKey(editedKey);
-            }
-            else
-            {
-                ClearEditor();
-                LoadList();
-                _lblStatus.Text = $"狀態: 已儲存 {result.交易單號}";
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"儲存失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
-
-    private void ClearEditor()
-    {
-        _viewing = false;
-        _viewingKey = 0;
-        _txtRemark.Clear();
-        _txtShipAddr.Clear();
-        _dtpDate.Value = DateTime.Now;
-        _dtpDelivery.Value = DateTime.Now;
-        if (_cmbTax.Items.Count > 0) _cmbTax.SelectedIndex = 0;
-        _txtNo.Text = PoOrderService.PreviewPoNo(_cmbKind.SelectedItem as string ?? "報價");
-        _gridDetail.Rows.Clear();
-        RecalcTotals();
-        _lblStatus.Text = "狀態: 就緒";
-    }
-
-    private void LoadList()
-    {
-        if (_cmbKind.SelectedItem is not string kindName) return;
-        var dt = PoOrderService.LoadPoList(kindName, _txtFilterNo.Text.Trim());
-        _loading = true;
-        _gridList.DataSource = dt;
-        if (_gridList.Columns.Contains("合計金額"))
-            _gridList.Columns["合計金額"].DefaultCellStyle.Format = "N2";
-        if (_gridList.Columns.Contains("營業稅"))
-            _gridList.Columns["營業稅"].DefaultCellStyle.Format = "N2";
-        if (_gridList.Columns.Contains("總計金額"))
-            _gridList.Columns["總計金額"].DefaultCellStyle.Format = "N2";
-        _loading = false;
-        UpdateListPos();
-    }
-
-    private void LoadSelectedView()
-    {
-        if (_gridList.SelectedRows.Count == 0 || _gridList.SelectedRows[0].IsNewRow)
-        {
-            MessageBox.Show("請先於清單選取一筆單據。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        long 副碼 = Convert.ToInt64(_gridList.SelectedRows[0].Cells["單據副碼"].Value);
-        LoadBillByKey(副碼);
-    }
-
-    /// <summary>依單據副碼載入檢視（檢視模式：可列印／刪除／修改，禁止直接儲存）。</summary>
-    private void LoadBillByKey(long 副碼)
-    {
-        var master = PoOrderService.LoadPoMaster(副碼);
-        if (master.Rows.Count == 0) return;
-        var m = master.Rows[0];
-        var details = PoOrderService.LoadPoDetails(副碼);
-
-        _viewing = true;
-        _viewingKey = 副碼;
-
-        _loading = true;
-        _cmbKind.SelectedItem = Str(m["單據類別"]);
-        _txtNo.Text = Str(m["交易單號"]);
-        _dtpDate.Value = DateTime.TryParse(Str(m["交易日期"]), out var d) ? d : DateTime.Now;
-        _dtpDelivery.Value = DateTime.TryParse(Str(m["交貨日期"]), out var dl) ? dl : DateTime.Now;
-        _cmbTax.SelectedItem = Str(m["課稅類別"]).Length > 0 ? Str(m["課稅類別"]) : "外加";
-        SelectComboValue(_cmbObject, Str(m["交易對象"]));
-        SelectComboValue(_cmbDept, Str(m["部門編號"]));
-        SelectComboValue(_cmbStaff, Str(m["員工編號"]));
-        _txtShipAddr.Text = Str(m["送貨地址"]);
-        _txtRemark.Text = Str(m["備註"]);
-        _loading = false;
-
-        _gridDetail.Rows.Clear();
-        foreach (DataRow r in details.Rows)
-        {
-            int i = _gridDetail.Rows.Add();
-            var gr = _gridDetail.Rows[i];
-            gr.Cells["貨品編號"].Value = Str(r["貨品編號"]);
-            gr.Cells["品名"].Value = Str(r["品名"]);
-            gr.Cells["倉庫"].Value = Str(r["倉庫編號"]);
-            gr.Cells["數量"].Value = r["數量"];
-            gr.Cells["交易數量"].Value = r["交易數量"];
-            gr.Cells["單位"].Value = Str(r["單位"]);
-            gr.Cells["單價"].Value = r["單價"];
-            gr.Cells["折扣"].Value = r["折扣"];
-            gr.Cells["金額"].Value = r["金額"];
-            gr.Cells["附註說明"].Value = Str(r["附註說明"]);
-        }
-        RecalcTotals();
-        _lblStatus.Text = $"狀態: 檢視 {_txtNo.Text}（可按「修改」後儲存）";
-        UpdateListPos();
-    }
-
-    /// <summary>修改：解除檢視鎖定，允許編輯後儲存（更新既有單據）。</summary>
-    private void StartEdit()
-    {
-        if (_viewingKey == 0)
-        {
-            MessageBox.Show("請先於清單選取並載入一筆單據，再按「修改」。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        _viewing = false;
-        _lblStatus.Text = $"狀態: 修改 {_txtNo.Text}（儲存將更新此單據）";
-    }
-
-    /// <summary>復原：捨棄未存變更（修改中回到原單據內容；新增中清空）。</summary>
-    private void RestoreEditor()
-    {
-        if (_viewingKey > 0)
-        {
-            LoadBillByKey(_viewingKey);
-            return;
-        }
-        ClearEditor();
-    }
-
-    /// <summary>搜尋：聚焦清單單號過濾框。</summary>
-    private void FocusListSearch()
-    {
-        _txtFilterNo.Focus();
-        _txtFilterNo.SelectAll();
-    }
-
-    /// <summary>原系統風導覽：extreme 為 true 時 delta 0=首筆、非 0=尾筆；否則上／下一筆。</summary>
-    private void MoveBillSelection(int delta, bool extreme)
-    {
-        if (_gridList.SelectedRows.Count == 0) return;
-        int idx = _gridList.SelectedRows[0].Index;
-        int target = extreme
-            ? (delta == 0 ? 0 : _gridList.Rows.Count - 1)
-            : Math.Clamp(idx + delta, 0, _gridList.Rows.Count - 1);
-        if (target < 0 || target >= _gridList.Rows.Count || target == idx) return;
-        _gridList.ClearSelection();
-        _gridList.Rows[target].Selected = true;
-        _gridList.CurrentCell = _gridList.Rows[target].Cells[0];
-        LoadSelectedView();
-    }
-
-    private void UpdateListPos()
-    {
-        int n = _gridList.Rows.Count;
-        int i = _gridList.SelectedRows.Count > 0 ? _gridList.SelectedRows[0].Index + 1 : 0;
-        _lblPos.Text = $"記錄: {i}/{n}";
     }
 
     private static void SelectComboValue(ComboBox cmb, string value)
@@ -705,7 +706,6 @@ public sealed class PoOrderForm : Form
         }
         catch
         {
-            // SelectedValue 類型不符時改以文字比對
         }
         for (int i = 0; i < cmb.Items.Count; i++)
         {
@@ -717,130 +717,8 @@ public sealed class PoOrderForm : Form
         }
     }
 
-    private void DeleteSelected()
-    {
-        if (_gridList.SelectedRows.Count == 0 || _gridList.SelectedRows[0].IsNewRow)
-        {
-            MessageBox.Show("請先於清單選取一筆單據。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        var row = _gridList.SelectedRows[0];
-        string 單號 = Str(row.Cells["交易單號"].Value);
-        long 副碼 = Convert.ToInt64(row.Cells["單據副碼"].Value);
-        var confirm = MessageBox.Show($"確定刪除單據「{單號}」？",
-            "刪除確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-        if (confirm != DialogResult.Yes) return;
-        try
-        {
-            PoOrderService.DeletePoBill(副碼);
-            MessageBox.Show($"單據「{單號}」已刪除。", "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            ClearEditor();
-            LoadList();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"刪除失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
-
-    // ==================== 工具 ====================
-
     private static string Str(object? v) => v is null or DBNull ? "" : v.ToString() ?? "";
 
     private static decimal Dec(object? v) =>
         v is null or DBNull ? 0m : (decimal.TryParse(v.ToString(), out var m) ? m : 0m);
-
-    // ==================== 列印 ====================
-
-    private static string ReportDir => ReportPrintService.RepDirectory;
-
-    private void PrintBill()
-    {
-        if (_viewingKey == 0)
-        {
-            MessageBox.Show("請先於清單選取並載入一筆單據，再按列印。", "列印", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-
-        var kind = PoOrderService.GetKind(Str(_cmbKind.SelectedItem));
-        string rtmPath = Path.Combine(ReportDir, kind.ReportFile);
-        if (!File.Exists(rtmPath))
-        {
-            MessageBox.Show($"找不到報表檔：{rtmPath}", "列印", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
-
-        Tpf0Object root;
-        try
-        {
-            root = Tpf0Reader.Parse(File.ReadAllBytes(rtmPath));
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"報表檔解析失敗：{ex.Message}", "列印", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
-
-        var report = RtmLoader.Load(root);
-        var data = BuildRtmData();
-        var billNo = Str(_txtNo.Text);
-
-        var state = new RtmRenderState();
-        using var renderer = new RtmRenderer(report, data);
-        using var doc = new PrintDocument
-        {
-            DocumentName = $"{kind.Name}單-{billNo}",
-        };
-        doc.DefaultPageSettings.PaperSize = new PaperSize("A4",
-            (int)Math.Round(report.MmPaperWidth / 25.4 * 100),
-            (int)Math.Round(report.MmPaperHeight / 25.4 * 100));
-        doc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);   // 邊界已含在 .rtm 座標內
-        doc.PrintPage += (s, e) =>
-        {
-            try
-            {
-                e.HasMorePages = renderer.RenderPage(e.Graphics!, e.PageBounds, state);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"列印發生錯誤：{ex.Message}", "列印", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                e.HasMorePages = false;
-            }
-        };
-
-        using var dlg = new PrintPreviewDialog
-        {
-            Document = doc,
-            Width = 960,
-            Height = 720,
-            StartPosition = FormStartPosition.CenterScreen,
-        };
-        dlg.ShowDialog(this);
-    }
-
-    /// <summary>建立報表資料：主檔（ppDBPipeline1）+ 公司（plCompany）+ 明細（ppDBPipeline2）。</summary>
-    private RtmData BuildRtmData()
-    {
-        var data = new RtmData { DetailPipeline = "ppDBPipeline2" };
-
-        var dt = PoOrderService.LoadPoMaster(_viewingKey);
-        if (dt.Rows.Count > 0)
-        {
-            var row = dt.Rows[0];
-            foreach (DataColumn col in dt.Columns)
-                data.Master[$"ppDBPipeline1|{col.ColumnName}"] = row[col];
-        }
-
-        ARService.FillCompany(data);
-
-        var detailDt = PoOrderService.LoadPoPrintDetails(_viewingKey);
-        foreach (DataRow dr in detailDt.Rows)
-        {
-            var d = new Dictionary<string, object?>();
-            foreach (DataColumn col in detailDt.Columns)
-                d[col.ColumnName] = dr[col];
-            data.Detail.Add(d);
-        }
-        return data;
-    }
 }

@@ -50,7 +50,6 @@ public class LoginForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        AutoScaleMode = AutoScaleMode.None;
         ClientSize = new Size(760, 600);
         BackColor = Color.White;
         Font = UiTheme.Font(11F);

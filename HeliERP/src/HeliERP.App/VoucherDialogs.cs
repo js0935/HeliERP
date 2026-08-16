@@ -107,7 +107,11 @@ public static class VoucherDialogs
         return dlg.ShowDialog(owner) == DialogResult.OK ? result : null;
     }
 
-    public static Dictionary<string, object?>? ShowDetail(IWin32Window owner, DataRow? row)
+    /// <summary>
+    /// 傳票明細編輯視窗。回傳 null 表示取消；
+    /// 否則 <c>Continue=true</c> 表示「新增並繼續」立即接著新增下一筆明細。
+    /// </summary>
+    public static (bool Continue, Dictionary<string, object?> Values)? ShowDetail(IWin32Window owner, DataRow? row)
     {
         using var dlg = new Form
         {
@@ -183,9 +187,12 @@ public static class VoucherDialogs
         lblMsg.Location = new Point(24, y);
         dlg.Controls.Add(lblMsg);
         y += 28;
+        bool isNew = row is null;
         var btnOk = new ModernButton { Text = "確定", Size = new Size(96, 40), Location = new Point(160, y), IsPrimary = true };
-        var btnCancel = new ModernButton { Text = "取消", Size = new Size(80, 40), Location = new Point(268, y), IsPrimary = false, DrawShadow = false };
+        var btnContinue = new ModernButton { Text = "新增並繼續", Size = new Size(110, 40), Location = new Point(268, y), IsPrimary = false, DrawShadow = false, Visible = isNew };
+        var btnCancel = new ModernButton { Text = "取消", Size = new Size(80, 40), Location = new Point(isNew ? 390 : 268, y), IsPrimary = false, DrawShadow = false };
         dlg.Controls.Add(btnOk);
+        dlg.Controls.Add(btnContinue);
         dlg.Controls.Add(btnCancel);
         dlg.AcceptButton = btnOk;
         dlg.CancelButton = btnCancel;
@@ -206,13 +213,13 @@ public static class VoucherDialogs
             cmbDebitCredit.SelectedIndex = 0;
         }
 
-        Dictionary<string, object?>? result = null;
-        btnOk.Click += (s, e) =>
+        (bool Continue, Dictionary<string, object?> Values)? result = null;
+        void Accept(bool cont)
         {
             if (cmbTitle.SelectedValue is null) { lblMsg.Text = "請選擇會計科目"; return; }
             if (!decimal.TryParse(txtAmount.Text.Trim(), out var amt)) amt = 0;
             var side = cmbDebitCredit.SelectedItem?.ToString() ?? "借";
-            result = new Dictionary<string, object?>
+            var values = new Dictionary<string, object?>
             {
                 ["借貸"] = side,
                 ["科目編號"] = cmbTitle.SelectedValue as string,
@@ -224,8 +231,11 @@ public static class VoucherDialogs
                 ["部門編號"] = cmbDept.SelectedValue as string,
                 ["專案編號"] = NullIfEmpty(txtProject.Text),
             };
+            result = (cont, values);
             dlg.DialogResult = DialogResult.OK;
-        };
+        }
+        btnOk.Click += (s, e) => Accept(false);
+        btnContinue.Click += (s, e) => Accept(true);
         btnCancel.Click += (s, e) => dlg.Close();
 
         UiTheme.ScaleForDpi(dlg);

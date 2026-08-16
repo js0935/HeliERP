@@ -193,6 +193,13 @@ public sealed class AccountingModuleForm : Form
                     DbManager.Param("$date", values["傳票日期"]), DbManager.Param("$kind", values["傳票類別"]),
                     DbManager.Param("$dept", values["部門編號"]), DbManager.Param("$review", values["覆核"]),
                     DbManager.Param("$maker", values["製單"]));
+                LoadVouchers();
+                _voucherKey = key;
+                _voucherNo = Convert.ToString(values["傳票編號"]) ?? "";
+                _voucherKind = Convert.ToString(values["傳票類別"]) ?? "";
+                LoadVoucherDetail();
+                EditVoucherDetail(null);
+                return;
             }
             else
             {
@@ -237,44 +244,51 @@ public sealed class AccountingModuleForm : Form
     private void EditVoucherDetail(DataRow? row)
     {
         if (_voucherKey < 0) { MessageBox.Show(this, "請先選擇一張傳票。", "傳票作業", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-        var values = VoucherDialogs.ShowDetail(this, row);
-        if (values is null) return;
-        try
+        while (true)
         {
-            if (row is null)
+            var dlg = VoucherDialogs.ShowDetail(this, row);
+            if (dlg is null) return;
+            var (cont, values) = dlg.Value;
+            try
             {
-                var seq = NextDetailSeq("傳票明細", _voucherKey);
-                DbManager.ExecuteNonQuery(
-                    "INSERT INTO [傳票明細] ([單據副碼],[建檔序號],[傳票編號],[傳票類別],[借貸],[科目編號],[金額],[摘要],[部門編號],[專案編號],[借方金額],[貸方金額]) " +
-                    "VALUES ($k,$seq,$no,$kind,$side,$title,$amt,$sum,$dept,$proj,$debit,$credit)",
-                    DbManager.Param("$k", _voucherKey), DbManager.Param("$seq", seq),
-                    DbManager.Param("$no", _voucherNo), DbManager.Param("$kind", _voucherKind),
-                    DbManager.Param("$side", values["借貸"]), DbManager.Param("$title", values["科目編號"]),
-                    DbManager.Param("$amt", values["金額"]),
-                    DbManager.Param("$sum", values["摘要"]), DbManager.Param("$dept", values["部門編號"]),
-                    DbManager.Param("$proj", values["專案編號"]), DbManager.Param("$debit", values["借方金額"]),
-                    DbManager.Param("$credit", values["貸方金額"]));
+                if (row is null)
+                {
+                    var seq = NextDetailSeq("傳票明細", _voucherKey);
+                    DbManager.ExecuteNonQuery(
+                        "INSERT INTO [傳票明細] ([單據副碼],[建檔序號],[傳票編號],[傳票類別],[借貸],[科目編號],[金額],[摘要],[部門編號],[專案編號],[借方金額],[貸方金額]) " +
+                        "VALUES ($k,$seq,$no,$kind,$side,$title,$amt,$sum,$dept,$proj,$debit,$credit)",
+                        DbManager.Param("$k", _voucherKey), DbManager.Param("$seq", seq),
+                        DbManager.Param("$no", _voucherNo), DbManager.Param("$kind", _voucherKind),
+                        DbManager.Param("$side", values["借貸"]), DbManager.Param("$title", values["科目編號"]),
+                        DbManager.Param("$amt", values["金額"]),
+                        DbManager.Param("$sum", values["摘要"]), DbManager.Param("$dept", values["部門編號"]),
+                        DbManager.Param("$proj", values["專案編號"]), DbManager.Param("$debit", values["借方金額"]),
+                        DbManager.Param("$credit", values["貸方金額"]));
+                }
+                else
+                {
+                    var seq = Convert.ToInt64(row["__seq"]);
+                    DbManager.ExecuteNonQuery(
+                        "UPDATE [傳票明細] SET [借貸]=$side,[科目編號]=$title,[金額]=$amt,[摘要]=$sum,[部門編號]=$dept," +
+                        "[專案編號]=$proj,[借方金額]=$debit,[貸方金額]=$credit WHERE [單據副碼]=$k AND [建檔序號]=$seq",
+                        DbManager.Param("$side", values["借貸"]), DbManager.Param("$title", values["科目編號"]),
+                        DbManager.Param("$amt", values["金額"]),
+                        DbManager.Param("$sum", values["摘要"]), DbManager.Param("$dept", values["部門編號"]),
+                        DbManager.Param("$proj", values["專案編號"]), DbManager.Param("$debit", values["借方金額"]),
+                        DbManager.Param("$credit", values["貸方金額"]),
+                        DbManager.Param("$k", _voucherKey), DbManager.Param("$seq", seq));
+                }
+                RecalcVoucher();
+                LoadVoucherDetail();
+                LoadVouchers();
             }
-            else
+            catch (Exception ex)
             {
-                var seq = Convert.ToInt64(row["__seq"]);
-                DbManager.ExecuteNonQuery(
-                    "UPDATE [傳票明細] SET [借貸]=$side,[科目編號]=$title,[金額]=$amt,[摘要]=$sum,[部門編號]=$dept," +
-                    "[專案編號]=$proj,[借方金額]=$debit,[貸方金額]=$credit WHERE [單據副碼]=$k AND [建檔序號]=$seq",
-                    DbManager.Param("$side", values["借貸"]), DbManager.Param("$title", values["科目編號"]),
-                    DbManager.Param("$amt", values["金額"]),
-                    DbManager.Param("$sum", values["摘要"]), DbManager.Param("$dept", values["部門編號"]),
-                    DbManager.Param("$proj", values["專案編號"]), DbManager.Param("$debit", values["借方金額"]),
-                    DbManager.Param("$credit", values["貸方金額"]),
-                    DbManager.Param("$k", _voucherKey), DbManager.Param("$seq", seq));
+                MessageBox.Show(this, "儲存失敗：" + ex.Message, "傳票作業", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            RecalcVoucher();
-            LoadVoucherDetail();
-            LoadVouchers();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, "儲存失敗：" + ex.Message, "傳票作業", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!cont) return;
+            row = null;
         }
     }
 

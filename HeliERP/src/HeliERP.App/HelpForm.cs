@@ -90,6 +90,7 @@ public sealed class HelpForm : Form
         var dt = new DataTable();
         dt.Columns.Add("流程", typeof(string));
         dt.Columns.Add("步驟", typeof(string));
+        dt.Rows.Add("傳票登錄", "新增傳票主檔 → 自動進入明細輸入，可「新增並繼續」連續登錄 → 借貸平衡後完成");
         dt.Rows.Add("多層核准", "新增／修改單據 → 送審 → 依權限層級核准 → 核准後單據生效");
         dt.Rows.Add("維修作業", "叫修登錄 → 派工（內修／外送）→ 維修 → 交貨 → 保固追蹤 → 帳款");
         dt.Rows.Add("電子發票", "字軌建置 → 自動配號 → 開立 → 作廢／退回（皆留稽核紀錄）");

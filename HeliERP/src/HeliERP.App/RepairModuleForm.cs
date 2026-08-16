@@ -15,72 +15,35 @@ namespace HeliERP.App;
 /// <summary>
 /// 維修管理子系統：維修單查詢/新增/編輯/狀態管理。
 /// 流程：叫修登記 → 收件 → 維修（內修/外送）→ 交貨 → 保固追蹤 → 帳款。
-/// 完整 94 欄位可編輯（分頁：基本、客戶叫修、費用帳款、維修內容、全部欄位）。
+/// 查詢式版面：全螢幕清單 ＋ 彈出編輯框（RepairEditDialog，分頁：基本、費用帳款、全部欄位）。
 /// </summary>
-public class RepairModuleForm : Form
+public sealed class RepairModuleForm : Form
 {
     private const string TableName = "維修主檔";
-    private static string ReportDir => ReportPrintService.RepDirectory;
 
     // 列表
-    private DataTable _listDt = new();
     private DataGridView _grid = null!;
     private TextBox _txtNo = null!, _txtCustomer = null!, _txtGoods = null!;
     private ComboBox _cmbStatusFilter = null!;
     private DateTimePicker _dtFrom = null!, _dtTo = null!;
 
-    // 編輯用（基本 + 客戶叫修 + 費用帳款）
-    private readonly Dictionary<string, Control> _editors = new();
-    private TextBox _txtCustomerName = null!, _txtGoodsName = null!;
-    private TextBox _txtFault = null!, _txtCause = null!, _txtSituation = null!, _txtRemark = null!;
-    private DataGridView _gridAll = null!;
-
-    // 導航列 + 狀態列
-    private ModernButton _btnFirst = null!, _btnPrev = null!, _btnNext = null!, _btnLast = null!;
+    // 狀態列
     private Label _lblRecord = null!, _lblStatus = null!;
     private int _currentIndex = -1;
 
-    // 狀態
+    // 目前選取資料
     private DataRow? _currentRow;
     private string _currentKey = "";
 
+    private bool _loading;
+
     private readonly AppUser? _user;
 
-    private readonly List<string> _dateFields = new();
-    private readonly List<string> _timeFields = new();
-    private readonly List<string> _moneyFields = new();
-    private readonly List<string> _memoFields = new();
-
-    private static readonly string[] StatusList = { "未處理", "內修", "外送", "交貨", "結案" };
-    private static readonly string[] RepairTypeList = { "保固內維修", "保固外維修", "合約內維修" };
-    private static readonly string[] RepairWayList = { "自取", "到府服務", "快遞收送" };
-    private static readonly string[] BuyTypeList = { "客戶外購", "公司銷售" };
-    private static readonly string[] TimeSlots =
-        Enumerable.Range(0, 48).Select(i => $"{(i / 2):00}:{(i % 2 == 0 ? "00" : "30")}").ToArray();
+    private static string ReportDir => ReportPrintService.RepDirectory;
 
     public RepairModuleForm(AppUser? user = null)
     {
         _user = user;
-        var table = SchemaReader.GetTable(TableName)
-            ?? throw new InvalidOperationException($"找不到資料表「{TableName}」");
-        var cols = table.Columns;
-        foreach (var c in cols)
-        {
-            var name = c.Name;
-            if (name.Contains("日期") || (name.Length <= 3 && name[0] == 'D' && name.All(ch => char.IsDigit(ch) || ch == 'D')))
-                _dateFields.Add(name);
-            else if (name.Contains("時間"))
-                _timeFields.Add(name);
-            else if (name.Contains("金額") || name.Contains("費用") || name.Contains("稅") ||
-                     name.Contains("單價") || name.Contains("數量") || name.Contains("折讓") ||
-                     name.Contains("理賠") || name.Contains("里程") || name.Contains("合計") ||
-                     name.Contains("總計"))
-                _moneyFields.Add(name);
-            else if (c.Type.Contains("MEMO") || name.Contains("現象") || name.Contains("原因") ||
-                     name.Contains("情況"))
-                _memoFields.Add(name);
-        }
-
         Text = "維修管理";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
@@ -92,18 +55,13 @@ public class RepairModuleForm : Form
         BuildToolbar();
         BuildSearchPanel();
         BuildListGrid();
-        BuildDetailTabs();
+        BuildStatusBar();
 
-        LoadList();
+        Load += (s, e) => LoadList();
 
         ShortcutHelper.Enable(this,
             NewBill,
-            () =>
-            {
-                if (string.IsNullOrEmpty(_currentKey)) return;
-                LoadBill(_currentKey);
-                _lblStatus.Text = "狀態: 修改中";
-            },
+            EditBill,
             DeleteBill,
             LoadList,
             LoadList);
@@ -112,14 +70,13 @@ public class RepairModuleForm : Form
         UiTheme.ClampToScreen(this);
     }
 
-    // ==================== UI 建立 ====================
+    // ==================== 版面建構 ====================
 
     private void BuildToolbar()
     {
         var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
         UiTheme.StyleTopBar(bar);
 
-        // 按舊系統工具列配置：搜尋 重讀 新增 修改 刪除 列印 | 儲存 復原 | 首筆 上筆 下筆 尾筆 | 說明 離開
         int x = UiTheme.SpacingMd;
         void Add(ModernButton b)
         {
@@ -147,43 +104,13 @@ public class RepairModuleForm : Form
         var btnNew = new ModernButton { Text = "新增", Width = 120 };
         btnNew.Click += (s, e) => NewBill();
         var btnEdit = new ModernButton { Text = "修改", Width = 120, IsPrimary = false };
-        btnEdit.Click += (s, e) =>
-        {
-            if (string.IsNullOrEmpty(_currentKey)) return;
-            LoadBill(_currentKey);
-            _lblStatus.Text = "狀態: 修改中";
-        };
+        btnEdit.Click += (s, e) => EditBill();
         var btnDel = new ModernButton { Text = "刪除", Width = 120, IsPrimary = false };
         btnDel.Click += (s, e) => DeleteBill();
         var btnPrint = new ModernButton { Text = "列印", Width = 120, IsPrimary = false };
         btnPrint.Click += (s, e) => PrintBill();
 
         Add(btnSearch); Add(btnReload); Add(btnNew); Add(btnEdit); Add(btnDel); Add(btnPrint);
-        Sep();
-
-        var btnSave = new ModernButton { Text = "儲存", Width = 120 };
-        btnSave.Click += (s, e) => SaveBill();
-        var btnRevert = new ModernButton { Text = "復原", Width = 120, IsPrimary = false };
-        btnRevert.Click += (s, e) =>
-        {
-            if (string.IsNullOrEmpty(_currentKey)) return;
-            LoadBill(_currentKey);
-            _lblStatus.Text = "狀態: 已復原";
-        };
-
-        Add(btnSave); Add(btnRevert);
-        Sep();
-
-        _btnFirst = new ModernButton { Text = "首筆", Width = 128, IsPrimary = false };
-        _btnPrev = new ModernButton { Text = "上筆", Width = 128, IsPrimary = false };
-        _btnNext = new ModernButton { Text = "下筆", Width = 128, IsPrimary = false };
-        _btnLast = new ModernButton { Text = "尾筆", Width = 128, IsPrimary = false };
-        _btnFirst.Click += (s, e) => SelectRow(0);
-        _btnPrev.Click += (s, e) => SelectRow(_currentIndex - 1);
-        _btnNext.Click += (s, e) => SelectRow(_currentIndex + 1);
-        _btnLast.Click += (s, e) => SelectRow(_grid.Rows.Count - 1);
-
-        Add(_btnFirst); Add(_btnPrev); Add(_btnNext); Add(_btnLast);
         Sep();
 
         var btnHelp = new ModernButton { Text = "說明", Width = 120, IsPrimary = false };
@@ -194,18 +121,6 @@ public class RepairModuleForm : Form
         btnExit.Click += (s, e) => Close();
 
         Add(btnHelp); Add(btnExit);
-
-        // 資料表資訊（右上）
-        var info = new Label
-        {
-            Text = $"資料表：{TableName}（{SchemaReader.GetTable(TableName)!.Columns.Count} 欄）",
-            ForeColor = Color.White,
-            Font = UiTheme.Font(10.5F),
-            AutoSize = true,
-        };
-        info.Location = new Point(bar.Width - info.Width - 16, 16);
-        bar.Resize += (s, e) => info.Location = new Point(bar.Width - info.Width - 16, 16);
-        bar.Controls.Add(info);
 
         Controls.Add(bar);
     }
@@ -226,18 +141,21 @@ public class RepairModuleForm : Form
         panel.Controls.Add(lblNo);
         _txtNo = new TextBox { Width = 120 };
         UiTheme.StyleTextBox(_txtNo);
+        _txtNo.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { LoadList(); e.SuppressKeyPress = true; } };
         panel.Controls.Add(_txtNo);
         var lblCust = new Label { Text = "客戶：", Margin = new Padding(UiTheme.SpacingMd, UiTheme.SpacingSm, 0, 0) };
         UiTheme.StyleLabel(lblCust, sub: true);
         panel.Controls.Add(lblCust);
         _txtCustomer = new TextBox { Width = 160 };
         UiTheme.StyleTextBox(_txtCustomer);
+        _txtCustomer.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { LoadList(); e.SuppressKeyPress = true; } };
         panel.Controls.Add(_txtCustomer);
         var lblGoods = new Label { Text = "品名：", Margin = new Padding(UiTheme.SpacingMd, UiTheme.SpacingSm, 0, 0) };
         UiTheme.StyleLabel(lblGoods, sub: true);
         panel.Controls.Add(lblGoods);
         _txtGoods = new TextBox { Width = 140 };
         UiTheme.StyleTextBox(_txtGoods);
+        _txtGoods.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { LoadList(); e.SuppressKeyPress = true; } };
         panel.Controls.Add(_txtGoods);
         var lblStatus = new Label { Text = "狀態：", Margin = new Padding(UiTheme.SpacingMd, UiTheme.SpacingSm, 0, 0) };
         UiTheme.StyleLabel(lblStatus, sub: true);
@@ -281,8 +199,7 @@ public class RepairModuleForm : Form
     {
         _grid = new DataGridView
         {
-            Dock = DockStyle.Top,
-            Height = 150,
+            Dock = DockStyle.Fill,
             ReadOnly = true,
             AllowUserToAddRows = false,
             AllowUserToDeleteRows = false,
@@ -295,6 +212,11 @@ public class RepairModuleForm : Form
         UiTheme.StyleDataGridView(_grid);
         _grid.RowTemplate.Height = 34;
         _grid.SelectionChanged += (s, e) => OnRowSelected();
+        _grid.CellDoubleClick += (s, e) =>
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+                EditBill();
+        };
         Controls.Add(_grid);
     }
 
@@ -321,215 +243,6 @@ public class RepairModuleForm : Form
         bar.Controls.Add(_lblRecord);
         bar.Controls.Add(_lblStatus);
         Controls.Add(bar);
-    }
-
-    private void BuildDetailTabs()
-    {
-        BuildStatusBar();
-        var tabs = new TabControl { Dock = DockStyle.Fill };
-        UiTheme.StyleTabControl(tabs);
-        tabs.TabPages.Add(BuildRepairCard());
-        tabs.TabPages.Add(BuildMoneyTab());
-        tabs.TabPages.Add(BuildAllFieldsTab());
-        Controls.Add(tabs);
-        tabs.BringToFront();
-    }
-
-    private TabPage BuildRepairCard()
-    {
-        var page = new TabPage("維修單");
-        var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = UiTheme.Background };
-        var panel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            ColumnCount = 8,
-            RowCount = 11,
-            Padding = new Padding(UiTheme.SpacingXl, UiTheme.SpacingMd, UiTheme.SpacingXl, UiTheme.SpacingSm),
-        };
-        for (int i = 0; i < 8; i++)
-            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-        for (int i = 0; i < 11; i++)
-            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, i is 7 or 8 or 9 or 10 ? 62 : 42));
-
-        AddEditor(panel, "維修單號", "交易單號", 0, 0, readOnly: true);
-        AddEditor(panel, "目前狀態", "目前狀態", 0, 1, comboItems: StatusList);
-        AddEditor(panel, "維修類別", "維修類別", 0, 2, comboItems: RepairTypeList);
-        AddEditor(panel, "交易日期", "交易日期", 0, 3, isDate: true);
-
-        AddEditor(panel, "客戶編號", "交易對象", 1, 0);
-        _txtCustomerName = new TextBox();
-        UiTheme.StyleTextBox(_txtCustomerName, readOnly: true);
-        var (lblCust, ctrlCust) = CreatePair(panel, "客戶名稱", _txtCustomerName);
-        panel.Controls.Add(lblCust, 2, 1);
-        panel.Controls.Add(ctrlCust, 3, 1);
-        AddEditor(panel, "貨品編號", "貨品編號", 1, 2);
-        _txtGoodsName = new TextBox();
-        UiTheme.StyleTextBox(_txtGoodsName, readOnly: true);
-        var (lblGoods, ctrlGoods) = CreatePair(panel, "品名", _txtGoodsName);
-        panel.Controls.Add(lblGoods, 6, 1);
-        panel.Controls.Add(ctrlGoods, 7, 1);
-
-        AddEditor(panel, "批號(貨品序號)", "批號", 2, 0);
-        AddEditor(panel, "數量合計", "數量合計", 2, 1);
-        AddEditor(panel, "送修方式", "送修方式", 2, 2, comboItems: RepairWayList);
-        AddEditor(panel, "購買類別", "購買類別", 2, 3, comboItems: BuyTypeList);
-
-        AddEditor(panel, "聯絡人", "聯絡人", 3, 0);
-        AddEditor(panel, "聯絡電話", "聯絡電話", 3, 1);
-        AddEditor(panel, "行動電話", "行動電話", 3, 2);
-        AddEditor(panel, "叫修日期", "叫修日期", 3, 3, isDate: true);
-
-        AddEditor(panel, "約定日期", "約定日期", 4, 0, isDate: true);
-        AddEditor(panel, "約定時間", "約定時間", 4, 1, isTime: true);
-        AddEditor(panel, "收件日期", "收件日期", 4, 2, isDate: true);
-        AddEditor(panel, "交貨日期", "交貨日期", 4, 3, isDate: true);
-
-        AddEditor(panel, "外送廠商", "外送廠商", 5, 0);
-        AddEditor(panel, "員工編號", "員工編號", 5, 1);
-        AddEditor(panel, "保固日期", "保固日期", 5, 2, isDate: true);
-        AddEditor(panel, "總計金額", "總計金額", 5, 3);
-
-        AddEditor(panel, "叫修地址", "叫修地址", 6, 0, spanCol: 4);
-        TextBox AddMemo(string label, int row)
-        {
-            var tb = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical };
-            UiTheme.StyleTextBox(tb);
-            var (lbl, ctrl) = CreatePair(panel, label, tb);
-            panel.Controls.Add(lbl, 0, row);
-            panel.Controls.Add(ctrl, 1, row);
-            panel.SetColumnSpan(ctrl, 7);
-            return tb;
-        }
-        _txtFault = AddMemo("故障現象", 7);
-        _txtCause = AddMemo("故障原因", 8);
-        _txtSituation = AddMemo("維修情況", 9);
-        _txtRemark = AddMemo("備註", 10);
-
-        scroll.Controls.Add(panel);
-        page.Controls.Add(scroll);
-        return page;
-    }
-
-    private TabPage BuildMoneyTab()
-    {
-        var page = new TabPage("費用與帳款");
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, Padding = new Padding(UiTheme.SpacingLg, UiTheme.SpacingMd, UiTheme.SpacingLg, UiTheme.SpacingMd) };
-        for (int i = 0; i < 4; i++)
-            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-        AddEditor(panel, "規格", "規格", 0, 0, spanCol: 2);
-        AddEditor(panel, "合計金額", "合計金額", 0, 2);
-        AddEditor(panel, "營業稅", "營業稅", 0, 3);
-        AddEditor(panel, "工資費用", "工資費用", 1, 0);
-        AddEditor(panel, "零件費用", "零件費用", 1, 1);
-        AddEditor(panel, "理賠金額", "理賠金額", 1, 2);
-        AddEditor(panel, "折讓金額", "折讓金額", 1, 3);
-        AddEditor(panel, "已收付金額", "已收付金額", 2, 0);
-        AddEditor(panel, "未收付金額", "未收付金額", 2, 1);
-        AddEditor(panel, "應收付金額", "應收付金額", 2, 2);
-        AddEditor(panel, "現金收付金額", "現金收付金額", 2, 3);
-        AddEditor(panel, "課稅類別", "課稅類別", 3, 0);
-        AddEditor(panel, "售價稅別", "售價稅別", 3, 1);
-        AddEditor(panel, "發票聯式", "發票聯式", 3, 2);
-        AddEditor(panel, "發票日期", "發票日期", 3, 3, isDate: true);
-        AddEditor(panel, "發票號碼", "發票號碼", 4, 0);
-        AddEditor(panel, "發票金額", "發票金額", 4, 1);
-        AddEditor(panel, "開立方式", "開立方式", 4, 2);
-        AddEditor(panel, "帳款日期", "帳款日期", 4, 3, isDate: true);
-        AddEditor(panel, "數量", "數量", 5, 0);
-        AddEditor(panel, "單價", "單價", 5, 1);
-        return page;
-    }
-
-    private TabPage BuildAllFieldsTab()
-    {
-        var page = new TabPage("全部欄位");
-        var label = new Label
-        {
-            Text = "※ 下列為資料表完整欄位（含彈性欄位 C01-C10 / N01-N10 / D01-D05 / L01-L05），可直接編輯值後儲存。",
-            Dock = DockStyle.Top, Padding = new Padding(UiTheme.SpacingSm, UiTheme.SpacingSm, UiTheme.SpacingSm, UiTheme.SpacingXs), AutoSize = true,
-        };
-        _gridAll = new DataGridView
-        {
-            Dock = DockStyle.Fill,
-            AllowUserToAddRows = false,
-            AllowUserToDeleteRows = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
-            RowHeadersVisible = false,
-        };
-        UiTheme.StyleDataGridView(_gridAll);
-        _gridAll.CellEndEdit += (s, e) =>
-        {
-            if (_currentRow is null || e.RowIndex < 0 || e.RowIndex >= _gridAll.Rows.Count)
-                return;
-            var row = _gridAll.Rows[e.RowIndex];
-            var fieldName = row.Cells["欄位名稱"].Value as string ?? "";
-            var newVal = row.Cells["欄位值"].Value as string ?? "";
-            if (_currentRow.Table.Columns.Contains(fieldName))
-                _currentRow[fieldName] = string.IsNullOrEmpty(newVal) ? DBNull.Value : newVal;
-        };
-        page.Controls.Add(_gridAll);
-        page.Controls.Add(label);
-        return page;
-    }
-
-    // ==================== 編輯控制項 ====================
-
-    private void AddEditor(TableLayoutPanel panel, string label, string field, int row, int col,
-        bool readOnly = false, bool isDate = false, bool isTime = false, int spanCol = 1,
-        string[]? comboItems = null, bool multiline = false)
-    {
-        var (lbl, ctrl) = CreatePair(panel, label, MakeEditor(field, readOnly, isDate, isTime, comboItems, multiline));
-        panel.Controls.Add(lbl, col * 2, row);
-        panel.Controls.Add(ctrl, col * 2 + 1, row);
-        if (spanCol > 1)
-            panel.SetColumnSpan(ctrl, spanCol * 2 - 1);
-        _editors[field] = ctrl;
-    }
-
-    private (Label, Control) CreatePair(TableLayoutPanel panel, string label, Control ctrl)
-    {
-        var lbl = new Label { Text = label + "：", Anchor = AnchorStyles.Right, Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingXs, 0) };
-        UiTheme.StyleLabel(lbl);
-        ctrl.Dock = DockStyle.Fill;
-        ctrl.Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingLg, UiTheme.SpacingXs);
-        ctrl.Tag = label;
-        return (lbl, ctrl);
-    }
-
-    private Control MakeEditor(string field, bool readOnly, bool isDate, bool isTime, string[]? comboItems, bool multiline)
-    {
-        Control ctrl;
-        if (isDate)
-        {
-            var dtp = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false };
-            UiTheme.StyleDateTimePicker(dtp);
-            dtp.ValueChanged += (s, e) => { if (_currentRow is not null && dtp.Checked) _currentRow[field] = dtp.Value.ToString("yyyy-MM-dd HH:mm:ss"); };
-            ctrl = dtp;
-        }
-        else if (isTime || comboItems is not null)
-        {
-            var cmb = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown };
-            UiTheme.StyleComboBox(cmb);
-            if (isTime)
-                cmb.Items.AddRange(TimeSlots);
-            else if (comboItems is not null)
-                cmb.Items.AddRange(comboItems);
-            ctrl = cmb;
-        }
-        else
-        {
-            var tb = new TextBox();
-            UiTheme.StyleTextBox(tb);
-            if (multiline)
-            {
-                tb.Multiline = true;
-                tb.ScrollBars = ScrollBars.Vertical;
-            }
-            ctrl = tb;
-        }
-        ctrl.Enabled = !readOnly;
-        return ctrl;
     }
 
     // ==================== 資料操作 ====================
@@ -581,47 +294,54 @@ public class RepairModuleForm : Form
             sql += " WHERE " + string.Join(" AND ", where);
         sql += " ORDER BY r.[交易單號] DESC";
 
-        _listDt = DbManager.QueryTable(sql, pars.ToArray());
-        _grid.DataSource = _listDt;
-        _grid.Columns["交易單號"].HeaderText = "單號";
-        _grid.Columns["交易日期"].HeaderText = "交易日期";
-        _grid.Columns["目前狀態"].HeaderText = "狀態";
-        _grid.Columns["維修類別"].HeaderText = "類別";
-        _grid.Columns["交易對象"].HeaderText = "對象編號";
-        _grid.Columns["客戶名稱"].HeaderText = "客戶名稱";
-        _grid.Columns["品名"].HeaderText = "品名";
-        _grid.Columns["總計金額"].HeaderText = "總計金額";
-        _grid.Columns["叫修日期"].HeaderText = "叫修日期";
-        _grid.Columns["交貨日期"].HeaderText = "交貨日期";
-        _grid.Columns["保固日期"].HeaderText = "保固日期";
-        if (_listDt.Rows.Count > 0)
+        _loading = true;
+        var dt = DbManager.QueryTable(sql, pars.ToArray());
+        _grid.DataSource = dt;
+        foreach (DataGridViewColumn c in _grid.Columns)
+        {
+            c.HeaderText = c.Name switch
+            {
+                "交易單號" => "單號",
+                "交易日期" => "交易日期",
+                "目前狀態" => "狀態",
+                "維修類別" => "類別",
+                "交易對象" => "對象編號",
+                "客戶名稱" => "客戶名稱",
+                "品名" => "品名",
+                "總計金額" => "總計金額",
+                "叫修日期" => "叫修日期",
+                "交貨日期" => "交貨日期",
+                "保固日期" => "保固日期",
+                _ => c.HeaderText,
+            };
+            if (c.Name == "總計金額")
+                c.DefaultCellStyle.Format = "N2";
+        }
+        _loading = false;
+        _lblRecord.Text = $"記錄: 0 / {dt.Rows.Count}";
+
+        if (dt.Rows.Count > 0)
+        {
+            _loading = true;
             _grid.Rows[0].Selected = true;
+            _grid.CurrentCell = _grid.Rows[0].Cells[0];
+            _loading = false;
+        }
+        else
+        {
+            _currentRow = null;
+            _currentKey = "";
+        }
     }
 
     private void OnRowSelected()
     {
-        if (_grid.SelectedRows.Count == 0 || _grid.SelectedRows[0].IsNewRow)
+        if (_loading || _grid.SelectedRows.Count == 0 || _grid.SelectedRows[0].IsNewRow)
             return;
         _currentIndex = _grid.SelectedRows[0].Index;
-        UpdateNav();
+        _lblRecord.Text = $"記錄: {_currentIndex + 1} / {_grid.Rows.Count}";
         var billNo = _grid.SelectedRows[0].Cells["交易單號"].Value as string ?? "";
         LoadBill(billNo);
-    }
-
-    private void SelectRow(int index)
-    {
-        if (_grid.Rows.Count == 0)
-            return;
-        if (index < 0) index = 0;
-        if (index >= _grid.Rows.Count) index = _grid.Rows.Count - 1;
-        _grid.Rows[index].Selected = true;
-        _grid.CurrentCell = _grid.Rows[index].Cells[0];
-    }
-
-    private void UpdateNav()
-    {
-        _lblRecord.Text = $"記錄: {_currentIndex + 1} / {_grid.Rows.Count}";
-        _lblStatus.Text = "狀態: 檢視";
     }
 
     private void LoadBill(string billNo)
@@ -633,58 +353,6 @@ public class RepairModuleForm : Form
             return;
         _currentRow = dt.Rows[0];
         _currentKey = billNo;
-
-        // 填寫編輯控制項
-        var cols = _currentRow.Table.Columns;
-        foreach (var (field, ctrl) in _editors)
-        {
-            if (!cols.Contains(field)) continue;
-            var val = _currentRow[field];
-            switch (ctrl)
-            {
-                case DateTimePicker dtp:
-                    if (val is DBNull or null)
-                        dtp.Checked = false;
-                    else if (DateTime.TryParse(val.ToString(), out var d))
-                    {
-                        dtp.Value = d;
-                        dtp.Checked = true;
-                    }
-                    break;
-                case ComboBox cmb:
-                    cmb.Text = val is DBNull or null ? "" : val.ToString();
-                    break;
-                case TextBox tb:
-                    tb.Text = val is DBNull or null ? "" : val.ToString();
-                    break;
-            }
-        }
-        _txtFault.Text = Str(_currentRow["故障現象"]);
-        _txtCause.Text = Str(_currentRow["故障原因"]);
-        _txtSituation.Text = Str(_currentRow["維修情況"]);
-        _txtRemark.Text = Str(_currentRow["備註"]);
-
-        // 客戶/貨品名稱
-        _txtCustomerName.Text = DbManager.QueryScalar(
-            "SELECT [公司簡稱] FROM [客戶廠商] WHERE [客廠編號] = $id",
-            DbManager.Param("$id", Str(_currentRow["交易對象"]))) as string ?? "";
-        _txtGoodsName.Text = DbManager.QueryScalar(
-            "SELECT [品名] FROM [貨品主檔] WHERE [貨品編號] = $id",
-            DbManager.Param("$id", Str(_currentRow["貨品編號"]))) as string ?? "";
-
-        // 全部欄位頁
-        var allDt = new DataTable();
-        allDt.Columns.Add("欄位名稱", typeof(string));
-        allDt.Columns.Add("欄位值", typeof(string));
-        foreach (DataColumn col in cols)
-        {
-            var v = _currentRow[col];
-            allDt.Rows.Add(col.ColumnName, v is DBNull or null ? "" : v.ToString());
-        }
-        _gridAll.DataSource = allDt;
-        _gridAll.Columns["欄位名稱"].ReadOnly = true;
-        _gridAll.Columns["欄位名稱"].Width = 220;
-        _gridAll.Columns["欄位值"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
     }
 
     private void NewBill()
@@ -703,12 +371,14 @@ public class RepairModuleForm : Form
             row["目前狀態"] = "未處理";
             row["維修類別"] = "保固外維修";
             row["明細筆數"] = 0;
-            empty.Rows.Add(row);
 
-            var cols = row.Table.Columns;
+            using var dlg = new RepairEditDialog(row);
+            if (dlg.ShowDialog(this) != DialogResult.OK)
+                return;
+
             var colNames = new List<string>();
             var pars = new List<SqliteParameter>();
-            foreach (DataColumn col in cols)
+            foreach (DataColumn col in row.Table.Columns)
             {
                 colNames.Add(col.ColumnName);
                 pars.Add(DbManager.Param($"${col.ColumnName}", row[col] is DBNull ? null : row[col]));
@@ -717,42 +387,71 @@ public class RepairModuleForm : Form
                 $"INSERT INTO \"{TableName}\" (\"{string.Join("\",\"", colNames)}\") VALUES ({string.Join(",", colNames.Select(c => $"${c}"))})",
                 pars.ToArray());
 
-            _currentRow = row;
-            _currentKey = billNo;
-
-            foreach (var (field, ctrl) in _editors)
-            {
-                if (!row.Table.Columns.Contains(field)) continue;
-                switch (ctrl)
-                {
-                    case DateTimePicker dtp: dtp.Checked = false; break;
-                    case ComboBox cmb: cmb.Text = ""; break;
-                    case TextBox tb: tb.Text = ""; break;
-                }
-            }
-            _editors["交易單號"].Text = billNo;
-            _editors["目前狀態"].Text = "未處理";
-            _editors["維修類別"].Text = "保固外維修";
-            _txtFault.Clear(); _txtCause.Clear(); _txtSituation.Clear(); _txtRemark.Clear();
-            _txtCustomerName.Clear(); _txtGoodsName.Clear();
-
-            var allDt = new DataTable();
-            allDt.Columns.Add("欄位名稱", typeof(string));
-            allDt.Columns.Add("欄位值", typeof(string));
-            foreach (DataColumn col in row.Table.Columns)
-                allDt.Rows.Add(col.ColumnName, row[col] is DBNull or null ? "" : row[col].ToString());
-            _gridAll.DataSource = allDt;
-            _gridAll.Columns["欄位名稱"].ReadOnly = true;
-            _gridAll.Columns["欄位名稱"].Width = 220;
-            _gridAll.Columns["欄位值"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-
             MessageBox.Show($"已建立新維修單：{billNo}", "新增", MessageBoxButtons.OK, MessageBoxIcon.Information);
             LoadList();
-            _lblStatus.Text = "狀態: 新增中";
+            SelectBill(billNo);
+            _lblStatus.Text = "狀態: 新增完成";
         }
         catch (Exception ex)
         {
             MessageBox.Show($"新增失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void EditBill()
+    {
+        if (string.IsNullOrEmpty(_currentKey))
+        {
+            MessageBox.Show("請先選取一筆維修單。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        try
+        {
+            LoadBill(_currentKey);
+            using var dlg = new RepairEditDialog(_currentRow!);
+            if (dlg.ShowDialog(this) != DialogResult.OK)
+                return;
+            SaveBill(_currentRow!);
+            _lblStatus.Text = "狀態: 已儲存";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"儲存失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void SaveBill(DataRow row)
+    {
+        var cols = row.Table.Columns;
+        var colNames = new List<string>();
+        var pars = new List<SqliteParameter>();
+        foreach (DataColumn col in cols)
+        {
+            colNames.Add(col.ColumnName);
+            pars.Add(DbManager.Param($"${col.ColumnName}",
+                row[col] is DBNull ? null : row[col]));
+        }
+        var sets = string.Join(",", colNames.Where(c => c != "交易單號" && c != "單據副碼").Select(c => $"\"{c}\" = ${c}"));
+        DbManager.ExecuteNonQuery(
+            $"UPDATE \"{TableName}\" SET {sets} WHERE [交易單號] = $交易單號",
+            pars.ToArray());
+        LoadList();
+        SelectBill(_currentKey);
+    }
+
+    private void SelectBill(string billNo)
+    {
+        for (int i = 0; i < _grid.Rows.Count; i++)
+        {
+            if (string.Equals(_grid.Rows[i].Cells["交易單號"].Value as string, billNo, StringComparison.OrdinalIgnoreCase))
+            {
+                _loading = true;
+                _grid.Rows[i].Selected = true;
+                _grid.CurrentCell = _grid.Rows[i].Cells[0];
+                _loading = false;
+                OnRowSelected();
+                return;
+            }
         }
     }
 
@@ -770,65 +469,34 @@ public class RepairModuleForm : Form
         return prefix + seq.ToString("0000");
     }
 
-    private void SaveBill()
+    private void DeleteBill()
     {
         if (_currentRow is null)
         {
-            MessageBox.Show("請先選取或新增一筆維修單。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("請先選取一筆維修單。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+        if (MessageBox.Show($"確定要刪除維修單「{_currentKey}」嗎？此動作無法復原。",
+                "刪除確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
         try
         {
-            // 從編輯控制項收集值
-            var cols = _currentRow.Table.Columns;
-            foreach (var (field, ctrl) in _editors)
-            {
-                if (!cols.Contains(field)) continue;
-                _currentRow[field] = ReadEditor(field, ctrl);
-            }
-            _currentRow["故障現象"] = _txtFault.Text;
-            _currentRow["故障原因"] = _txtCause.Text;
-            _currentRow["維修情況"] = _txtSituation.Text;
-            _currentRow["備註"] = _txtRemark.Text;
-
-            var colNames = new List<string>();
-            var pars = new List<SqliteParameter>();
-            foreach (DataColumn col in cols)
-            {
-                colNames.Add(col.ColumnName);
-                pars.Add(DbManager.Param($"${col.ColumnName}",
-                    _currentRow[col] is DBNull ? null : _currentRow[col]));
-            }
-            var sets = string.Join(",", colNames.Where(c => c != "交易單號" && c != "單據副碼").Select(c => $"\"{c}\" = ${c}"));
             DbManager.ExecuteNonQuery(
-                $"UPDATE \"{TableName}\" SET {sets} WHERE [交易單號] = $交易單號",
-                pars.ToArray());
-
-            MessageBox.Show("儲存成功。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                $"DELETE FROM \"{TableName}\" WHERE [交易單號] = $no",
+                DbManager.Param("$no", _currentKey));
+            MessageBox.Show("已刪除。", "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _currentRow = null;
+            _currentKey = "";
             LoadList();
-            _lblStatus.Text = "狀態: 已儲存";
+            _lblStatus.Text = "狀態: 已刪除";
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"儲存失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"刪除失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private object ReadEditor(string field, Control ctrl)
-    {
-        switch (ctrl)
-        {
-            case DateTimePicker dtp:
-                if (!dtp.Checked) return DBNull.Value;
-                return dtp.Value.ToString("yyyy-MM-dd HH:mm:ss");
-            case ComboBox cmb:
-                return string.IsNullOrWhiteSpace(cmb.Text) ? DBNull.Value : cmb.Text;
-            case TextBox tb:
-                return string.IsNullOrWhiteSpace(tb.Text) ? DBNull.Value : tb.Text;
-            default:
-                return DBNull.Value;
-        }
-    }
+    // ==================== 列印 ====================
 
     private void PrintBill()
     {
@@ -903,9 +571,7 @@ public class RepairModuleForm : Form
         foreach (DataColumn col in row.Table.Columns)
             master[col.ColumnName] = row[col];
         // join 欄位：舊系統報表使用「對象名稱」「員工名稱」，主檔僅存編號
-        master["對象名稱"] = string.IsNullOrWhiteSpace(_txtCustomerName.Text)
-            ? LookupCustomerName(row["交易對象"])
-            : _txtCustomerName.Text;
+        master["對象名稱"] = LookupCustomerName(row["交易對象"]);
         master["員工名稱"] = LookupStaffName(row["員工編號"]);
 
         var data = new RtmData { Master = master };
@@ -958,55 +624,409 @@ public class RepairModuleForm : Form
         return v?.ToString() ?? "";
     }
 
-    private void DeleteBill()
+    private static string Str(object? v) => v is null or DBNull ? "" : v.ToString() ?? "";
+}
+
+/// <summary>
+/// 維修單編輯對話框：分頁（維修單 / 費用與帳款 / 全部欄位）編輯 94 欄位。
+/// 確定後將值寫回資料列（呼叫端再儲存）。
+/// </summary>
+public sealed class RepairEditDialog : Form
+{
+    private const string TableName = "維修主檔";
+
+    private readonly DataRow _row;
+    private readonly Dictionary<string, Control> _editors = new();
+
+    // 維修單 tab
+    private TextBox _txtCustomerName = null!, _txtGoodsName = null!;
+    private TextBox _txtFault = null!, _txtCause = null!, _txtSituation = null!, _txtRemark = null!;
+
+    // 全部欄位 tab
+    private DataGridView _gridAll = null!;
+
+    private static readonly string[] StatusList = { "未處理", "內修", "外送", "交貨", "結案" };
+    private static readonly string[] RepairTypeList = { "保固內維修", "保固外維修", "合約內維修" };
+    private static readonly string[] RepairWayList = { "自取", "到府服務", "快遞收送" };
+    private static readonly string[] BuyTypeList = { "客戶外購", "公司銷售" };
+    private static readonly string[] TimeSlots =
+        Enumerable.Range(0, 48).Select(i => $"{(i / 2):00}:{(i % 2 == 0 ? "00" : "30")}").ToArray();
+
+    public RepairEditDialog(DataRow row)
     {
-        if (_currentRow is null)
+        _row = row;
+        Text = row.RowState == DataRowState.Detached ? "新增維修單" : "修改維修單";
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = MinimizeBox = false;
+        StartPosition = FormStartPosition.CenterParent;
+        BackColor = UiTheme.Background;
+        Font = UiTheme.Font(10F);
+        ClientSize = new Size(1000, 720);
+        MinimumSize = new Size(900, 640);
+
+        var tabs = new TabControl { Dock = DockStyle.Fill };
+        UiTheme.StyleTabControl(tabs);
+        tabs.TabPages.Add(BuildRepairCard());
+        tabs.TabPages.Add(BuildMoneyTab());
+        tabs.TabPages.Add(BuildAllFieldsTab());
+        Controls.Add(tabs);
+
+        var bar = new Panel { Dock = DockStyle.Bottom, Height = 54, BackColor = UiTheme.BorderLight };
+        var btnOk = new ModernButton
         {
-            MessageBox.Show("請先選取一筆維修單。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
+            Text = "確定",
+            Size = new Size(96, 40),
+            Location = new Point(ClientSize.Width - 214, 7),
+            IsPrimary = true,
+        };
+        var btnCancel = new ModernButton
+        {
+            Text = "取消",
+            Size = new Size(96, 40),
+            Location = new Point(ClientSize.Width - 108, 7),
+            IsPrimary = false,
+            DrawShadow = false,
+        };
+        btnOk.Click += (s, e) =>
+        {
+            ApplyToRow();
+            DialogResult = DialogResult.OK;
+        };
+        btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
+        bar.Controls.Add(btnOk);
+        bar.Controls.Add(btnCancel);
+        Controls.Add(bar);
+
+        Populate();
+
+        UiTheme.ScaleForDpi(this);
+        UiTheme.ClampToScreen(this);
+    }
+
+    // ==================== 分頁版面 ====================
+
+    private TabPage BuildRepairCard()
+    {
+        var page = new TabPage("維修單");
+        var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = UiTheme.Background };
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            ColumnCount = 8,
+            RowCount = 11,
+            Padding = new Padding(UiTheme.SpacingXl, UiTheme.SpacingMd, UiTheme.SpacingXl, UiTheme.SpacingSm),
+        };
+        for (int i = 0; i < 8; i++)
+            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
+        for (int i = 0; i < 11; i++)
+            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, i is 7 or 8 or 9 or 10 ? 62 : 42));
+
+        AddEditor(panel, "維修單號", "交易單號", 0, 0, readOnly: true);
+        AddEditor(panel, "目前狀態", "目前狀態", 0, 1, comboItems: StatusList);
+        AddEditor(panel, "維修類別", "維修類別", 0, 2, comboItems: RepairTypeList);
+        AddEditor(panel, "交易日期", "交易日期", 0, 3, isDate: true);
+
+        AddEditor(panel, "客戶編號", "交易對象", 1, 0);
+        _txtCustomerName = MakeReadOnlyTextBox();
+        var (lblCust, ctrlCust) = CreatePair(panel, "客戶名稱", _txtCustomerName);
+        panel.Controls.Add(lblCust, 2, 1);
+        panel.Controls.Add(ctrlCust, 3, 1);
+        AddEditor(panel, "貨品編號", "貨品編號", 1, 2);
+        _txtGoodsName = MakeReadOnlyTextBox();
+        var (lblGoods, ctrlGoods) = CreatePair(panel, "品名", _txtGoodsName);
+        panel.Controls.Add(lblGoods, 6, 1);
+        panel.Controls.Add(ctrlGoods, 7, 1);
+
+        AddEditor(panel, "批號(貨品序號)", "批號", 2, 0);
+        AddEditor(panel, "數量合計", "數量合計", 2, 1);
+        AddEditor(panel, "送修方式", "送修方式", 2, 2, comboItems: RepairWayList);
+        AddEditor(panel, "購買類別", "購買類別", 2, 3, comboItems: BuyTypeList);
+
+        AddEditor(panel, "聯絡人", "聯絡人", 3, 0);
+        AddEditor(panel, "聯絡電話", "聯絡電話", 3, 1);
+        AddEditor(panel, "行動電話", "行動電話", 3, 2);
+        AddEditor(panel, "叫修日期", "叫修日期", 3, 3, isDate: true);
+
+        AddEditor(panel, "約定日期", "約定日期", 4, 0, isDate: true);
+        AddEditor(panel, "約定時間", "約定時間", 4, 1, isTime: true);
+        AddEditor(panel, "收件日期", "收件日期", 4, 2, isDate: true);
+        AddEditor(panel, "交貨日期", "交貨日期", 4, 3, isDate: true);
+
+        AddEditor(panel, "外送廠商", "外送廠商", 5, 0);
+        AddEditor(panel, "員工編號", "員工編號", 5, 1);
+        AddEditor(panel, "保固日期", "保固日期", 5, 2, isDate: true);
+        AddEditor(panel, "總計金額", "總計金額", 5, 3);
+
+        AddEditor(panel, "叫修地址", "叫修地址", 6, 0, spanCol: 4);
+        TextBox AddMemo(string label, int rowIndex)
+        {
+            var tb = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical };
+            UiTheme.StyleTextBox(tb);
+            var (lbl, ctrl) = CreatePair(panel, label, tb);
+            panel.Controls.Add(lbl, 0, rowIndex);
+            panel.Controls.Add(ctrl, 1, rowIndex);
+            panel.SetColumnSpan(ctrl, 7);
+            return tb;
         }
-        if (MessageBox.Show($"確定要刪除維修單「{_currentKey}」嗎？此動作無法復原。",
-                "刪除確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
-            return;
-        try
+        _txtFault = AddMemo("故障現象", 7);
+        _txtCause = AddMemo("故障原因", 8);
+        _txtSituation = AddMemo("維修情況", 9);
+        _txtRemark = AddMemo("備註", 10);
+
+        scroll.Controls.Add(panel);
+        page.Controls.Add(scroll);
+        return page;
+    }
+
+    private TabPage BuildMoneyTab()
+    {
+        var page = new TabPage("費用與帳款");
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, Padding = new Padding(UiTheme.SpacingLg, UiTheme.SpacingMd, UiTheme.SpacingLg, UiTheme.SpacingMd) };
+        for (int i = 0; i < 4; i++)
+            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+        AddEditor(panel, "規格", "規格", 0, 0, spanCol: 2);
+        AddEditor(panel, "合計金額", "合計金額", 0, 2);
+        AddEditor(panel, "營業稅", "營業稅", 0, 3);
+        AddEditor(panel, "工資費用", "工資費用", 1, 0);
+        AddEditor(panel, "零件費用", "零件費用", 1, 1);
+        AddEditor(panel, "理賠金額", "理賠金額", 1, 2);
+        AddEditor(panel, "折讓金額", "折讓金額", 1, 3);
+        AddEditor(panel, "已收付金額", "已收付金額", 2, 0);
+        AddEditor(panel, "未收付金額", "未收付金額", 2, 1);
+        AddEditor(panel, "應收付金額", "應收付金額", 2, 2);
+        AddEditor(panel, "現金收付金額", "現金收付金額", 2, 3);
+        AddEditor(panel, "課稅類別", "課稅類別", 3, 0);
+        AddEditor(panel, "售價稅別", "售價稅別", 3, 1);
+        AddEditor(panel, "發票聯式", "發票聯式", 3, 2);
+        AddEditor(panel, "發票日期", "發票日期", 3, 3, isDate: true);
+        AddEditor(panel, "發票號碼", "發票號碼", 4, 0);
+        AddEditor(panel, "發票金額", "發票金額", 4, 1);
+        AddEditor(panel, "開立方式", "開立方式", 4, 2);
+        AddEditor(panel, "帳款日期", "帳款日期", 4, 3, isDate: true);
+        AddEditor(panel, "數量", "數量", 5, 0);
+        AddEditor(panel, "單價", "單價", 5, 1);
+        return page;
+    }
+
+    private TabPage BuildAllFieldsTab()
+    {
+        var page = new TabPage("全部欄位");
+        var label = new Label
         {
-            DbManager.ExecuteNonQuery(
-                $"DELETE FROM \"{TableName}\" WHERE [交易單號] = $no",
-                DbManager.Param("$no", _currentKey));
-            MessageBox.Show("已刪除。", "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            _currentRow = null;
-            LoadList();
-            _lblStatus.Text = "狀態: 已刪除";
+            Text = "※ 下列為資料表完整欄位（含彈性欄位 C01-C10 / N01-N10 / D01-D05 / L01-L05），可直接編輯值後儲存。",
+            Dock = DockStyle.Top, Padding = new Padding(UiTheme.SpacingSm, UiTheme.SpacingSm, UiTheme.SpacingSm, UiTheme.SpacingXs), AutoSize = true,
+        };
+        _gridAll = new DataGridView
+        {
+            Dock = DockStyle.Fill,
+            AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+            RowHeadersVisible = false,
+        };
+        UiTheme.StyleDataGridView(_gridAll);
+        _gridAll.CellEndEdit += (s, e) =>
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= _gridAll.Rows.Count)
+                return;
+            var row = _gridAll.Rows[e.RowIndex];
+            var fieldName = row.Cells["欄位名稱"].Value as string ?? "";
+            var newVal = row.Cells["欄位值"].Value as string ?? "";
+            if (_row.Table.Columns.Contains(fieldName))
+                _row[fieldName] = string.IsNullOrEmpty(newVal) ? DBNull.Value : newVal;
+        };
+        page.Controls.Add(_gridAll);
+        page.Controls.Add(label);
+        return page;
+    }
+
+    // ==================== 編輯控制項 ====================
+
+    private void AddEditor(TableLayoutPanel panel, string label, string field, int row, int col,
+        bool readOnly = false, bool isDate = false, bool isTime = false, int spanCol = 1,
+        string[]? comboItems = null, bool multiline = false)
+    {
+        var (lbl, ctrl) = CreatePair(panel, label, MakeEditor(field, readOnly, isDate, isTime, comboItems, multiline));
+        panel.Controls.Add(lbl, col * 2, row);
+        panel.Controls.Add(ctrl, col * 2 + 1, row);
+        if (spanCol > 1)
+            panel.SetColumnSpan(ctrl, spanCol * 2 - 1);
+        _editors[field] = ctrl;
+    }
+
+    private static (Label, Control) CreatePair(TableLayoutPanel panel, string label, Control ctrl)
+    {
+        var lbl = new Label { Text = label + "：", Anchor = AnchorStyles.Right, Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingXs, 0) };
+        UiTheme.StyleLabel(lbl);
+        ctrl.Dock = DockStyle.Fill;
+        ctrl.Margin = new Padding(UiTheme.SpacingXs, UiTheme.SpacingSm, UiTheme.SpacingLg, UiTheme.SpacingXs);
+        ctrl.Tag = label;
+        return (lbl, ctrl);
+    }
+
+    private Control MakeEditor(string field, bool readOnly, bool isDate, bool isTime, string[]? comboItems, bool multiline)
+    {
+        Control ctrl;
+        if (isDate)
+        {
+            var dtp = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false };
+            UiTheme.StyleDateTimePicker(dtp);
+            ctrl = dtp;
         }
-        catch (Exception ex)
+        else if (isTime || comboItems is not null)
         {
-            MessageBox.Show($"刪除失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            var cmb = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown };
+            UiTheme.StyleComboBox(cmb);
+            if (isTime)
+                cmb.Items.AddRange(TimeSlots);
+            else if (comboItems is not null)
+                cmb.Items.AddRange(comboItems);
+            ctrl = cmb;
+        }
+        else
+        {
+            var tb = new TextBox();
+            if (readOnly)
+            {
+                tb.ReadOnly = true;
+                tb.BackColor = UiTheme.BorderLight;
+            }
+            UiTheme.StyleTextBox(tb);
+            if (multiline)
+            {
+                tb.Multiline = true;
+                tb.ScrollBars = ScrollBars.Vertical;
+            }
+            ctrl = tb;
+        }
+        return ctrl;
+    }
+
+    private static TextBox MakeReadOnlyTextBox()
+    {
+        var tb = new TextBox { ReadOnly = true, BackColor = UiTheme.BorderLight };
+        UiTheme.StyleTextBox(tb);
+        return tb;
+    }
+
+    // ==================== 填值 / 收集 ====================
+
+    private void Populate()
+    {
+        var cols = _row.Table.Columns;
+        foreach (var (field, ctrl) in _editors)
+        {
+            if (!cols.Contains(field)) continue;
+            var val = _row[field];
+            switch (ctrl)
+            {
+                case DateTimePicker dtp:
+                    if (val is DBNull or null)
+                        dtp.Checked = false;
+                    else if (DateTime.TryParse(val.ToString(), out var d))
+                    {
+                        dtp.Value = d;
+                        dtp.Checked = true;
+                    }
+                    break;
+                case ComboBox cmb:
+                    cmb.Text = val is DBNull or null ? "" : val.ToString();
+                    break;
+                case TextBox tb:
+                    tb.Text = val is DBNull or null ? "" : val.ToString();
+                    break;
+            }
+        }
+        _txtFault.Text = Str(_row["故障現象"]);
+        _txtCause.Text = Str(_row["故障原因"]);
+        _txtSituation.Text = Str(_row["維修情況"]);
+        _txtRemark.Text = Str(_row["備註"]);
+
+        UpdateCustomerName();
+        UpdateGoodsName();
+
+        var ed = _editors["交易對象"];
+        ed.TextChanged += (s, e) => UpdateCustomerName();
+        var eg = _editors["貨品編號"];
+        eg.TextChanged += (s, e) => UpdateGoodsName();
+
+        // 全部欄位頁
+        var allDt = new DataTable();
+        allDt.Columns.Add("欄位名稱", typeof(string));
+        allDt.Columns.Add("欄位值", typeof(string));
+        foreach (DataColumn col in cols)
+        {
+            var v = _row[col];
+            allDt.Rows.Add(col.ColumnName, v is DBNull or null ? "" : v.ToString());
+        }
+        _gridAll.DataSource = allDt;
+        _gridAll.Columns["欄位名稱"].ReadOnly = true;
+        _gridAll.Columns["欄位名稱"].Width = 220;
+        _gridAll.Columns["欄位值"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+    }
+
+    private void UpdateCustomerName()
+    {
+        var id = ((TextBox)_editors["交易對象"]).Text.Trim();
+        _txtCustomerName.Text = string.IsNullOrEmpty(id)
+            ? ""
+            : DbManager.QueryScalar(
+                "SELECT [公司簡稱] FROM [客戶廠商] WHERE [客廠編號] = $id",
+                DbManager.Param("$id", id)) as string ?? "";
+    }
+
+    private void UpdateGoodsName()
+    {
+        var id = ((TextBox)_editors["貨品編號"]).Text.Trim();
+        _txtGoodsName.Text = string.IsNullOrEmpty(id)
+            ? ""
+            : DbManager.QueryScalar(
+                "SELECT [品名] FROM [貨品主檔] WHERE [貨品編號] = $id",
+                DbManager.Param("$id", id)) as string ?? "";
+    }
+
+    private void ApplyToRow()
+    {
+        var cols = _row.Table.Columns;
+        foreach (var (field, ctrl) in _editors)
+        {
+            if (!cols.Contains(field)) continue;
+            _row[field] = ReadEditor(ctrl);
+        }
+        _row["故障現象"] = _txtFault.Text;
+        _row["故障原因"] = _txtCause.Text;
+        _row["維修情況"] = _txtSituation.Text;
+        _row["備註"] = _txtRemark.Text;
+
+        // 全部欄位頁：套用未以主編輯控制項編輯的彈性欄位（editor 優先）
+        foreach (DataGridViewRow g in _gridAll.Rows)
+        {
+            var fieldName = g.Cells["欄位名稱"].Value as string ?? "";
+            if (fieldName.Length == 0 || _editors.ContainsKey(fieldName) || !cols.Contains(fieldName))
+                continue;
+            if (fieldName is "故障現象" or "故障原因" or "維修情況" or "備註")
+                continue;
+            var newVal = g.Cells["欄位值"].Value as string ?? "";
+            _row[fieldName] = string.IsNullOrEmpty(newVal) ? DBNull.Value : newVal;
         }
     }
 
-    private void ChangeStatus(string status)
+    private static object ReadEditor(Control ctrl)
     {
-        if (_currentRow is null)
+        switch (ctrl)
         {
-            MessageBox.Show("請先選取一筆維修單。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        try
-        {
-            DbManager.ExecuteNonQuery(
-                $"UPDATE \"{TableName}\" SET [目前狀態] = $st WHERE [交易單號] = $no",
-                DbManager.Param("$st", status), DbManager.Param("$no", _currentKey));
-            if (_editors.TryGetValue("目前狀態", out var ctrl))
-                ctrl.Text = status;
-            MessageBox.Show($"狀態已變更為「{status}」。", "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            LoadList();
-            _lblStatus.Text = $"狀態: 已變更為 {status}";
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"狀態變更失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            case DateTimePicker dtp:
+                if (!dtp.Checked) return DBNull.Value;
+                return dtp.Value.ToString("yyyy-MM-dd HH:mm:ss");
+            case ComboBox cmb:
+                return string.IsNullOrWhiteSpace(cmb.Text) ? DBNull.Value : cmb.Text;
+            case TextBox tb:
+                return string.IsNullOrWhiteSpace(tb.Text) ? DBNull.Value : tb.Text;
+            default:
+                return DBNull.Value;
         }
     }
 
-    private static string Str(object v) => v is DBNull or null ? "" : v.ToString() ?? "";
+    private static string Str(object? v) => v is null or DBNull ? "" : v.ToString() ?? "";
 }

@@ -37,7 +37,8 @@ public sealed class AccountReceivableForm : Form
     private static readonly string[] _detailMoneyColumns =
         { "總計金額", "折讓金額", "已收付金額", "未收付金額" };
 
-    public AccountReceivableForm()
+    /// <summary>開啟帳款管理；<paramref name="初始顯示類別"/> 指定後直接切至該類別（預設應收）。</summary>
+    public AccountReceivableForm(string? 初始顯示類別 = null)
     {
         Text = "應收帳款管理";
         StartPosition = FormStartPosition.CenterParent;
@@ -57,6 +58,11 @@ public sealed class AccountReceivableForm : Form
         Load += (s, e) =>
         {
             _cmbKind.SelectedIndex = 0;
+            if (!string.IsNullOrEmpty(初始顯示類別))
+            {
+                int idx = Array.IndexOf(ARService.Kinds, 初始顯示類別);
+                if (idx >= 0) _cmbKind.SelectedIndex = idx;
+            }
             _lblStatus.Text = "狀態: 就緒";
         };
 

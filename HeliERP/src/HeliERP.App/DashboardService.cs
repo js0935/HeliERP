@@ -31,6 +31,9 @@ public sealed class DashboardData
     /// <summary>應收帳款帳齡：未逾期 / 1-30 / 31-60 / 61-90 / 90天以上。</summary>
     public decimal[] 應收帳齡 = new decimal[5];
     public decimal 逾期未收金額;
+    /// <summary>應付帳款帳齡：未逾期 / 1-30 / 31-60 / 61-90 / 90天以上。</summary>
+    public decimal[] 應付帳齡 = new decimal[5];
+    public decimal 逾期未付金額;
     public DataTable 客戶業績TOP = new();
     public int 客戶數;
     public int 廠商數;
@@ -147,9 +150,18 @@ public static class DashboardService
         d.近12月折讓 = 折讓;
     }
 
-    /// <summary>應收帳款帳齡分佈（帳款簡要未收付依交易日期推算天數）。</summary>
+    /// <summary>應收／應付帳款帳齡分佈（帳款簡要未收付依交易日期推算天數）。</summary>
     private static void LoadAging(DashboardData d)
     {
+        d.應收帳齡 = LoadAgingKind(ARService.應收類別);
+        d.應付帳齡 = LoadAgingKind(ARService.應付類別);
+        d.逾期未收金額 = d.應收帳齡[1] + d.應收帳齡[2] + d.應收帳齡[3] + d.應收帳齡[4];
+        d.逾期未付金額 = d.應付帳齡[1] + d.應付帳齡[2] + d.應付帳齡[3] + d.應付帳齡[4];
+    }
+
+    private static decimal[] LoadAgingKind(string 客廠類別)
+    {
+        var result = new decimal[5];
         var row = DbManager.QueryTable(
             "SELECT " +
             "COALESCE(SUM(CASE WHEN age <= 0 THEN v END),0) AS c0, " +
@@ -160,17 +172,17 @@ public static class DashboardService
             "FROM (SELECT julianday('now') - julianday([交易日期]) AS age, [未收付金額] AS v " +
             "FROM [帳款簡要] A JOIN [客戶廠商] C ON A.[交易對象] = C.[客廠編號] " +
             "AND C.[客廠類別] = $t WHERE A.[未收付金額] > 0)",
-            DbManager.Param("$t", ARService.應收類別));
+            DbManager.Param("$t", 客廠類別));
         if (row.Rows.Count > 0)
         {
-            d.應收帳齡 = new[]
+            result = new[]
             {
                 GetDec(row.Rows[0]["c0"]), GetDec(row.Rows[0]["c30"]),
                 GetDec(row.Rows[0]["c60"]), GetDec(row.Rows[0]["c90"]),
                 GetDec(row.Rows[0]["c999"]),
             };
         }
-        d.逾期未收金額 = d.應收帳齡[1] + d.應收帳齡[2] + d.應收帳齡[3] + d.應收帳齡[4];
+        return result;
     }
 
     /// <summary>近 6 個月客戶業績 TOP（出貨金額）。</summary>

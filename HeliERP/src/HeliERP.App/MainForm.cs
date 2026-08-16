@@ -398,6 +398,9 @@ public class MainForm : Form
             "帳齡 1 天以上未收金額", dash.逾期未收金額 > 0 ? UiTheme.Danger : UiTheme.Ok, OpenAccountReceivable));
         cardsFlow.Controls.Add(StatCard("應付帳款餘額", dash.應付餘額.ToString("N0"),
             $"未付單據 {dash.未付單據筆數} 筆", UiTheme.AccentDark, OpenPaymentModule));
+        cardsFlow.Controls.Add(StatCard("逾期未付", dash.逾期未付金額.ToString("N0"),
+            "帳齡 1 天以上未付金額", dash.逾期未付金額 > 0 ? UiTheme.Danger : UiTheme.Ok,
+            () => new AccountReceivableForm(ARService.Kinds[1]).ShowDialog(this)));
         cardsFlow.Controls.Add(StatCard("今日出貨", dash.今日出貨金額.ToString("N0"),
             $"出貨 {dash.今日出貨筆數} 筆", UiTheme.Ok, OpenTradeModule));
         cardsFlow.Controls.Add(StatCard("本月進貨", dash.本月進貨金額.ToString("N0"),

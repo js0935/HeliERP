@@ -43,6 +43,7 @@ public class TransactionForm : Form
 
     // 明細
     private DataGridView _gridDetail = null!;
+    private DataTable _goodsList = new();
 
     // 導覽 + 狀態
     private ModernButton _btnFirst = null!, _btnPrev = null!, _btnNext = null!, _btnLast = null!;
@@ -441,8 +442,9 @@ public class TransactionForm : Form
         };
         UiTheme.StyleDataGridView(_gridDetail);
         _gridDetail.RowTemplate.Height = 30;
+        _gridDetail.DataError += (s, e) => { e.ThrowException = false; };
 
-        var goodsList = DbManager.QueryTable(
+        var goodsList = _goodsList = DbManager.QueryTable(
             "SELECT [貨品編號], [品名] FROM [貨品主檔] ORDER BY [貨品編號]");
         goodsList.Columns.Add("顯示", typeof(string));
         foreach (DataRow r in goodsList.Rows)
@@ -788,7 +790,9 @@ public class TransactionForm : Form
         {
             int i = _gridDetail.Rows.Add();
             var row = _gridDetail.Rows[i];
-            row.Cells["貨品編號"].Value = Str(dr["貨品編號"]);
+            var 貨品編號 = Str(dr["貨品編號"]);
+            EnsureGoodsInList(貨品編號);
+            row.Cells["貨品編號"].Value = 貨品編號;
             row.Cells["倉庫編號"].Value = Str(dr["倉庫編號"]);
             row.Cells["調入倉庫"].Value = Str(dr["調入倉庫"]);
             row.Cells["數量"].Value = Dec(dr["數量"]);
@@ -805,6 +809,28 @@ public class TransactionForm : Form
         }
         _loading = false;
         RecalcSummary();
+    }
+
+    /// <summary>
+    /// 確保「貨品編號」下拉資料源包含指定編號：歷史明細中若存在已從「貨品主檔」
+    /// 刪除的貨品，ComboBox 值會找不到選項而拋出「DataGridViewComboBoxCell 值無效」，
+    /// 在此將該編號以「（貨品資料已不存在）」補入資料源，避免例外並保留原始單據內容。
+    /// </summary>
+    private void EnsureGoodsInList(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return;
+        foreach (DataRow r in _goodsList.Rows)
+        {
+            if (string.Equals(r["貨品編號"]?.ToString(), code, StringComparison.Ordinal))
+                return;
+        }
+        var nr = _goodsList.NewRow();
+        nr["貨品編號"] = code;
+        nr["品名"] = "（貨品資料已不存在）";
+        nr["顯示"] = $"{code}　（貨品資料已不存在）";
+        _goodsList.Rows.Add(nr);
+        _goodsList.AcceptChanges();
     }
 
     private void NewBill()

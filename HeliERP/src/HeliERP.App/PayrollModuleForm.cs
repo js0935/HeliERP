@@ -373,7 +373,7 @@ public sealed class PayrollModuleForm : Form
 
     private Panel BuildBar((string Text, Action Action)[] buttons, Label? status)
     {
-        var bar = new Panel { Height = 46, BackColor = Color.FromArgb(243, 245, 248), Padding = new Padding(10, 6, 10, 6) };
+        var bar = new Panel { Height = 46, BackColor = UiTheme.Background, Padding = new Padding(10, 6, 10, 6) };
         int x = 12;
         foreach (var (text, action) in buttons)
         {

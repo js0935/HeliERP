@@ -100,7 +100,7 @@ public sealed class BillModuleForm : Form
 
     private void BuildFilterBar()
     {
-        var bar = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = Color.FromArgb(243, 245, 248), Padding = new Padding(UiTheme.SpacingMd, 10, UiTheme.SpacingMd, 8) };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = UiTheme.Background, Padding = new Padding(UiTheme.SpacingMd, 10, UiTheme.SpacingMd, 8) };
         int x = UiTheme.SpacingMd;
         void Field(string label, Control c, int w)
         {

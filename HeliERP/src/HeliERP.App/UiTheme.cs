@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
-// 版本：1.1.0（UI/UX 精緻化升級）
+// 版本：1.2.0（極簡高級灰主題）
 // ════════════════════════════════════════════════════════
 using System.Data;
 using System.Drawing.Drawing2D;
@@ -10,43 +10,44 @@ namespace HeliERP.App;
 
 /// <summary>
 /// 全系統統一主題：色彩、字型、間距、控制項樣式。
-/// 商務 ERP 風格：深藍主色 + 金色點綴、淺灰背景、統一資料表格樣式。
+/// 極簡高級灰：深炭側欄、極淺灰表面、單一深藍強調、表格列頭淺灰底深字、大量留白。
+/// 1.2.0：全面現代化——汰除舊式深藍/金，採用極簡高級灰配色與現代表格列頭。
 /// 1.1.0：新增間距/圓角令牌、柔和陰影、卡片容器、表單標題列、工具列/樹狀樣式、懸停反饋。
 /// </summary>
 public static class UiTheme
 {
-    // ── 主色系 ──
-    public static readonly Color Primary = Color.FromArgb(31, 78, 121);      // #1F4E79 深藍
-    public static readonly Color PrimaryDark = Color.FromArgb(22, 54, 92);   // #16365C
-    public static readonly Color PrimaryLight = Color.FromArgb(43, 89, 154); // #2B579A
-    public static readonly Color Accent = Color.FromArgb(232, 163, 61);      // #E8A33D 金
-    public static readonly Color AccentDark = Color.FromArgb(198, 131, 32);  // #C68320
+    // ── 主色系（極簡高級灰：單一深藍強調）──
+    public static readonly Color Primary = Color.FromArgb(37, 99, 235);        // #2563EB 深藍
+    public static readonly Color PrimaryDark = Color.FromArgb(29, 78, 216);    // #1D4ED8
+    public static readonly Color PrimaryLight = Color.FromArgb(96, 165, 250);  // #60A5FA
+    public static readonly Color Accent = Color.FromArgb(59, 130, 246);        // #3B82F6 藍
+    public static readonly Color AccentDark = Color.FromArgb(30, 64, 175);     // #1E40AF
 
-    // ── 中性色 ──
-    public static readonly Color Background = Color.FromArgb(242, 244, 247); // #F2F4F7 視窗底（冷調微亮）
+    // ── 中性色（極淺灰表面）──
+    public static readonly Color Background = Color.FromArgb(245, 245, 247);   // #F5F5F7 視窗底
     public static readonly Color Card = Color.White;                          // 卡片/輸入框底
-    public static readonly Color TextMain = Color.FromArgb(33, 37, 41);      // #212529
-    public static readonly Color TextSub = Color.FromArgb(108, 117, 125);    // #6C757D
-    public static readonly Color TextFaint = Color.FromArgb(154, 160, 166);  // 更淡輔助文字
-    public static readonly Color Border = Color.FromArgb(222, 226, 230);     // #DEE2E6
-    public static readonly Color BorderLight = Color.FromArgb(233, 236, 240);// 極淡分隔線
-    public static readonly Color GridLine = Color.FromArgb(233, 236, 239);   // #E9ECEF
-    public static readonly Color RowAlt = Color.FromArgb(247, 249, 252);     // #F7F9FC 奇偶列
-    public static readonly Color SelectBack = Color.FromArgb(222, 235, 247); // 選取列淺藍
-    public static readonly Color HoverRow = Color.FromArgb(236, 243, 252);   // 表格列懸停
-    public static readonly Color FocusBack = Color.FromArgb(248, 251, 255);  // 輸入框聚焦底
-    public static readonly Color Hover = Color.FromArgb(56, 110, 168);       // 懸停亮
-    public static readonly Color Pressed = Color.FromArgb(16, 45, 78);       // 按下暗
+    public static readonly Color TextMain = Color.FromArgb(26, 26, 30);       // #1A1A1E
+    public static readonly Color TextSub = Color.FromArgb(110, 110, 115);     // #6E6E73
+    public static readonly Color TextFaint = Color.FromArgb(161, 161, 170);   // 更淡輔助文字
+    public static readonly Color Border = Color.FromArgb(228, 228, 231);      // #E4E4E7
+    public static readonly Color BorderLight = Color.FromArgb(240, 240, 242); // 極淡分隔線
+    public static readonly Color GridLine = Color.FromArgb(237, 237, 240);    // #EDEDF0
+    public static readonly Color RowAlt = Color.FromArgb(250, 250, 250);      // #FAFAFA 奇偶列
+    public static readonly Color SelectBack = Color.FromArgb(234, 241, 254);  // 選取列淺藍
+    public static readonly Color HoverRow = Color.FromArgb(244, 244, 245);    // 表格列懸停
+    public static readonly Color FocusBack = Color.FromArgb(251, 251, 253);   // 輸入框聚焦底
+    public static readonly Color Hover = Color.FromArgb(59, 130, 246);        // 懸停亮
+    public static readonly Color Pressed = Color.FromArgb(30, 64, 175);       // 按下暗
 
-    // ── 側邊導覽 ──
-    public static readonly Color Sidebar = Color.FromArgb(24, 36, 52);       // #182434
-    public static readonly Color SidebarHover = Color.FromArgb(38, 56, 78);
-    public static readonly Color SidebarActive = Color.FromArgb(31, 78, 121);
+    // ── 側邊導覽（深炭）──
+    public static readonly Color Sidebar = Color.FromArgb(24, 24, 27);        // #18181B
+    public static readonly Color SidebarHover = Color.FromArgb(38, 38, 42);
+    public static readonly Color SidebarActive = Color.FromArgb(37, 99, 235);
 
-    // ── 狀態色 ──
-    public static readonly Color Ok = Color.FromArgb(40, 167, 69);           // 成功
-    public static readonly Color Warn = Color.FromArgb(255, 193, 7);         // 警告
-    public static readonly Color Danger = Color.FromArgb(220, 53, 69);       // 錯誤
+    // ── 狀態色（沉穩低飽和）──
+    public static readonly Color Ok = Color.FromArgb(22, 163, 74);            // 成功
+    public static readonly Color Warn = Color.FromArgb(217, 119, 6);          // 警告
+    public static readonly Color Danger = Color.FromArgb(220, 38, 38);        // 錯誤
 
     // ── 間距令牌（統一版面節奏）──
     public const int SpacingXs = 4;
@@ -58,8 +59,8 @@ public static class UiTheme
 
     // ── 圓角令牌 ──
     public const int RadiusSm = 6;
-    public const int RadiusMd = 10;
-    public const int RadiusLg = 14;
+    public const int RadiusMd = 12;
+    public const int RadiusLg = 16;
 
     /// <summary>取得系統字型（微軟正黑體）</summary>
     public static Font Font(float size, FontStyle style = FontStyle.Regular) =>
@@ -290,8 +291,10 @@ public static class UiTheme
         grid.BorderStyle = BorderStyle.None;
         grid.EnableHeadersVisualStyles = false;
         grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        grid.ColumnHeadersDefaultCellStyle.BackColor = Primary;
-        grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+        grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(244, 244, 245);
+        grid.ColumnHeadersDefaultCellStyle.ForeColor = TextMain;
+        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(244, 244, 245);
+        grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = TextMain;
         grid.ColumnHeadersDefaultCellStyle.Font = Font(10.5F, FontStyle.Bold);
         grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
         grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
@@ -307,7 +310,7 @@ public static class UiTheme
         grid.RowTemplate.Height = 32;
         grid.GridColor = GridLine;
         grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-        grid.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(236, 239, 243);
+        grid.RowHeadersDefaultCellStyle.BackColor = Color.FromArgb(244, 244, 245);
         grid.RowHeadersDefaultCellStyle.ForeColor = TextSub;
         grid.RowHeadersDefaultCellStyle.SelectionBackColor = SelectBack;
         grid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
@@ -327,11 +330,13 @@ public static class UiTheme
         };
     }
 
-    /// <summary>主鍵欄列頭標示：深藍底白字粗體，與一般欄位區別</summary>
+    /// <summary>主鍵欄列頭標示：淺藍底深藍字粗體，與一般欄位區別</summary>
     public static void StyleHeaderBold(DataGridViewColumn column)
     {
-        column.HeaderCell.Style.BackColor = PrimaryDark;
-        column.HeaderCell.Style.ForeColor = Color.White;
+        column.HeaderCell.Style.BackColor = SelectBack;
+        column.HeaderCell.Style.ForeColor = PrimaryDark;
+        column.HeaderCell.Style.SelectionBackColor = SelectBack;
+        column.HeaderCell.Style.SelectionForeColor = PrimaryDark;
         column.HeaderCell.Style.Font = Font(10.5F, FontStyle.Bold);
     }
 
@@ -480,7 +485,7 @@ public static class UiTheme
             bool selected = (e.State & TreeNodeStates.Selected) != 0;
             bool root = e.Node.Level == 0;
             var bounds = e.Bounds;
-            using (var bg = new SolidBrush(selected ? SelectBack : (root ? Color.FromArgb(246, 248, 251) : Card)))
+            using (var bg = new SolidBrush(selected ? SelectBack : (root ? Color.FromArgb(241, 244, 249) : Card)))
                 e.Graphics.FillRectangle(bg, bounds);
             if (selected)
             {

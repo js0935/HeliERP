@@ -124,7 +124,7 @@ public class ModernButton : Button
         else
         {
             if (_pressed) { top = UiTheme.SelectBack; bottom = UiTheme.SelectBack; }
-            else if (_hover) { top = Color.FromArgb(232, 240, 248); bottom = Color.FromArgb(232, 240, 248); }
+            else if (_hover) { top = UiTheme.HoverRow; bottom = UiTheme.HoverRow; }
             else { top = Color.White; bottom = Color.White; }
             UiTheme.FillRounded(g, rect, radius, top, bottom);
             using var pen = new Pen(_hover ? UiTheme.Primary : UiTheme.Border);

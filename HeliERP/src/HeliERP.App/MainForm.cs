@@ -18,6 +18,7 @@ public class MainForm : Form
 {
     private readonly DbConfig _config;
     private readonly AppUser _user;
+    private readonly ToolTip _cardTip = new() { AutoPopDelay = 6000, InitialDelay = 350, ReshowDelay = 120 };
 
     /// <summary>模組按鈕資料</summary>
     private record ModuleDef(string Name, string Desc, Func<Form> Open);
@@ -387,19 +388,19 @@ public class MainForm : Form
             cardsFlow.Controls.Add(card);
         }
         cardsFlow.Controls.Add(StatCard("庫存不足", $"{dash.庫存不足筆數} 項",
-            "現有數量低於安全存量", dash.庫存不足筆數 > 0 ? UiTheme.Danger : UiTheme.Ok));
+            "現有數量低於安全存量", dash.庫存不足筆數 > 0 ? UiTheme.Danger : UiTheme.Ok, OpenInventory));
         cardsFlow.Controls.Add(StatCard("應收帳款餘額", dash.應收餘額.ToString("N0"),
-            $"未收單據 {dash.未收單據筆數} 筆", UiTheme.Primary));
+            $"未收單據 {dash.未收單據筆數} 筆", UiTheme.Primary, OpenAccountReceivable));
         cardsFlow.Controls.Add(StatCard("應付帳款餘額", dash.應付餘額.ToString("N0"),
-            $"未付單據 {dash.未付單據筆數} 筆", UiTheme.AccentDark));
+            $"未付單據 {dash.未付單據筆數} 筆", UiTheme.AccentDark, OpenPaymentModule));
         cardsFlow.Controls.Add(StatCard("今日出貨", dash.今日出貨金額.ToString("N0"),
-            $"出貨 {dash.今日出貨筆數} 筆", UiTheme.Ok));
+            $"出貨 {dash.今日出貨筆數} 筆", UiTheme.Ok, OpenTradeModule));
         cardsFlow.Controls.Add(StatCard("本月進貨", dash.本月進貨金額.ToString("N0"),
-            $"進貨 {dash.本月進貨筆數} 筆", UiTheme.PrimaryLight));
+            $"進貨 {dash.本月進貨筆數} 筆", UiTheme.PrimaryLight, OpenTradeModule));
         cardsFlow.Controls.Add(StatCard("庫存總額", dash.庫存總額.ToString("N0"),
-            $"{dash.貨品數} 項貨品", UiTheme.PrimaryLight));
+            $"{dash.貨品數} 項貨品", UiTheme.PrimaryLight, OpenInventory));
         cardsFlow.Controls.Add(StatCard("本月折讓", dash.本月折讓金額.ToString("N0"),
-            $"出貨 {dash.今日出貨筆數} 筆 / 今月出貨 {dash.本月出貨筆數} 筆", UiTheme.AccentDark));
+            $"今日折讓 {dash.今日折讓筆數} 筆 / 本月折讓 {dash.本月折讓筆數} 筆", UiTheme.AccentDark, OpenDiscountModule));
         box.Controls.Add(cardsFlow);
 
         box.Controls.Add(ShortStockCard(dash));
@@ -455,7 +456,7 @@ public class MainForm : Form
         return content;
     }
 
-    private Panel StatCard(string title, string big, string sub, Color accent)
+    private Panel StatCard(string title, string big, string sub, Color accent, Action? onOpen = null)
     {
         var card = new Panel
         {
@@ -489,7 +490,28 @@ public class MainForm : Form
             AutoSize = true,
             Location = new Point(22, 102),
         });
+        if (onOpen != null)
+            MakeCardClickable(card, onOpen, $"點擊開啟「{title}」");
         return card;
+    }
+
+    /// <summary>讓整張卡片可點擊：手型游標、hover 底色、提示與子控制項點擊轉發。</summary>
+    private void MakeCardClickable(Control root, Action onOpen, string tip)
+    {
+        root.Cursor = Cursors.Hand;
+        _cardTip.SetToolTip(root, tip);
+        void Enter(object? s, EventArgs e) => root.BackColor = UiTheme.HoverRow;
+        void Leave(object? s, EventArgs e) => root.BackColor = UiTheme.Card;
+        root.MouseEnter += Enter;
+        root.MouseLeave += Leave;
+        root.Click += (s, e) => onOpen();
+        foreach (Control c in root.Controls)
+        {
+            c.Cursor = Cursors.Hand;
+            c.MouseEnter += Enter;
+            c.MouseLeave += Leave;
+            c.Click += (s, e) => onOpen();
+        }
     }
 
     private Panel ShortStockCard(DashboardData dash)

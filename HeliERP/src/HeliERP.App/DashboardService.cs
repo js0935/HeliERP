@@ -38,6 +38,8 @@ public sealed class DashboardData
     public decimal 庫存總額;
     public int 本月出貨筆數;
     public decimal 本月折讓金額;
+    public int 今日折讓筆數;
+    public int 本月折讓筆數;
 }
 
 /// <summary>
@@ -193,6 +195,13 @@ public static class DashboardService
             DbManager.Param("$p", month + "%"));
         d.本月折讓金額 = ScalarDec(
             "SELECT COALESCE(SUM([總計金額]),0) FROM [折讓主檔] WHERE [折讓日期] LIKE $p",
+            DbManager.Param("$p", month + "%"));
+        string todayYm = DateTime.Now.ToString("yyyy-MM-dd");
+        d.今日折讓筆數 = ScalarInt(
+            "SELECT COUNT(*) FROM [折讓主檔] WHERE [折讓日期] LIKE $p",
+            DbManager.Param("$p", todayYm + "%"));
+        d.本月折讓筆數 = ScalarInt(
+            "SELECT COUNT(*) FROM [折讓主檔] WHERE [折讓日期] LIKE $p",
             DbManager.Param("$p", month + "%"));
     }
 

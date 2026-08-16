@@ -386,7 +386,7 @@ public sealed class GenericEditorDialog : Form
         name.Contains("票面") || name.Contains("成本") || name.Contains("單價");
 
     // ── 驗證與回寫 ──
-    private string? Validate()
+    private new string? Validate()
     {
         foreach (var (col, ctrl) in _fields)
         {

@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HeliERP.App/HeliERP.App.csproj" />
+    <Project Path="src/HeliERP.Data/HeliERP.Data.csproj" />
+    <Project Path="src/HeliERP.Models/HeliERP.Models.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,29 @@
+# 建置輸出
+**/bin/
+**/obj/
+.vs/
+
+# 資料庫與備份（含 Access 原始檔與 SQLite 快照）
+*.db
+*.mdb
+*.bak-*
+shots/
+schema_out.txt
+verify_trade_result.txt
+payment_data.txt
+payment_sample.txt
+
+# 結構樣板資料庫例外：只有欄位結構、無任何資料，供下載後建庫
+!database/HeliERP.structure.db
+
+# 使用者設定
+*.user
+
+# 工具與發布產物
+.codegraph/
+.omo/
+Pili6/
+publish/
+
+# 檢查工具輸出紀錄
+verify-logs/

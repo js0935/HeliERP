@@ -40,6 +40,7 @@ public sealed class DashboardData
     public decimal 本月折讓金額;
     public int 今日折讓筆數;
     public int 本月折讓筆數;
+    public int 待核准筆數;
 }
 
 /// <summary>
@@ -91,6 +92,9 @@ public static class DashboardService
         LoadAging(d);
         LoadTopCustomers(d);
         LoadKpi(d);
+
+        // 5. 待核准單據（多層核准流程尚未核准者）
+        d.待核准筆數 = ApprovalService.LoadFlows(null, ApprovalService.待核准, "").Rows.Count;
         return d;
     }
 

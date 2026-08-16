@@ -404,6 +404,9 @@ public class MainForm : Form
             $"{dash.貨品數} 項貨品", UiTheme.PrimaryLight, OpenInventory));
         cardsFlow.Controls.Add(StatCard("本月折讓", dash.本月折讓金額.ToString("N0"),
             $"今日折讓 {dash.今日折讓筆數} 筆 / 本月折讓 {dash.本月折讓筆數} 筆", UiTheme.AccentDark, OpenDiscountModule));
+        cardsFlow.Controls.Add(StatCard("待核准", $"{dash.待核准筆數} 筆",
+            "採購／訂貨／收付單據多層核准", dash.待核准筆數 > 0 ? UiTheme.Warn : UiTheme.Ok,
+            () => new ApprovalForm().ShowDialog(this)));
         box.Controls.Add(cardsFlow);
 
         box.Controls.Add(ShortStockCard(dash));

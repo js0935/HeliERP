@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -83,6 +83,8 @@ public class TableBrowserForm : Form
             _tree.SelectedNode = _tree.SelectedNode.Nodes[0];
 
         ShortcutHelper.Enable(this, onSearch: () => _txtSearch.Focus());
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

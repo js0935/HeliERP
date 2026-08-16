@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.1.0（UI/UX 精緻化升級）
@@ -28,14 +28,14 @@ public class ConfigForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(680, 410);
+        ClientSize = new Size(680, 384);
         UiTheme.Apply(this);
 
         // 標題列
         Controls.Add(UiTheme.BuildHeader("資料庫設定", "設定 HeliERP 資料庫連線"));
 
         // ── 卡片 1：資料庫路徑 ──
-        var cardDb = new Panel { Location = new Point(UiTheme.SpacingXl, UiTheme.SpacingXl), Size = new Size(632, 80) };
+        var cardDb = new Panel { Location = new Point(UiTheme.SpacingXl, 76), Size = new Size(632, 80) };
         UiTheme.StyleCardPanel(cardDb);
         var lblDb = new Label { Text = "資料庫路徑：", AutoSize = true, Location = new Point(UiTheme.SpacingLg, UiTheme.SpacingLg + 4) };
         UiTheme.StyleLabel(lblDb);
@@ -58,7 +58,7 @@ public class ConfigForm : Form
         cardDb.Controls.AddRange(new Control[] { lblDb, _txtDbPath, _btnBrowse });
 
         // ── 卡片 2：公司資訊 ──
-        var cardCompany = new Panel { Location = new Point(UiTheme.SpacingXl, 116), Size = new Size(632, 148) };
+        var cardCompany = new Panel { Location = new Point(UiTheme.SpacingXl, 168), Size = new Size(632, 148) };
         UiTheme.StyleCardPanel(cardCompany);
         var lblCompany = new Label { Text = "公司資訊：", AutoSize = true, Location = new Point(UiTheme.SpacingLg, UiTheme.SpacingLg + 4) };
         UiTheme.StyleLabel(lblCompany);
@@ -89,10 +89,12 @@ public class ConfigForm : Form
         _btnCancel = new ModernButton { Text = "取　消", Size = new Size(100, 40), Location = new Point(232, 0), IsPrimary = false };
         _btnCancel.Click += (s, e) => Close();
 
-        var btnRow = new Panel { Location = new Point(UiTheme.SpacingXl, 276), Size = new Size(632, 40) };
+        var btnRow = new Panel { Location = new Point(UiTheme.SpacingXl, 328), Size = new Size(632, 40) };
         btnRow.Controls.AddRange(new Control[] { _btnTest, _btnOk, _btnCancel, _lblStatus });
 
         Controls.AddRange(new Control[] { cardDb, cardCompany, btnRow });
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

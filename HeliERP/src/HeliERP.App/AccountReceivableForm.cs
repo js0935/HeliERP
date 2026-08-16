@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -61,6 +61,8 @@ public sealed class AccountReceivableForm : Form
         };
 
         ShortcutHelper.Enable(this, onSearch: LoadSummary);
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 
@@ -499,6 +501,7 @@ public sealed class AccountReceivableForm : Form
         bottom.Controls.Add(btnOk);
         bottom.Controls.Add(btnCancel);
         dlg.Controls.Add(bottom);
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
 
         if (dlg.ShowDialog(this) == DialogResult.OK)

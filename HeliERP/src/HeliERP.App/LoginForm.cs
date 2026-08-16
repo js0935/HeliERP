@@ -169,6 +169,7 @@ public class LoginForm : Form
         CancelButton = _btnCancel;
 
         LoadDatabases();
+        UiTheme.ScaleForDpi(this);
         UiTheme.ClampToScreen(this);
     }
 
@@ -313,21 +314,24 @@ public class LoginForm : Form
         // 左側品牌區：深藍漸層（背景層繪製，讓透明 Label 透出漸層）
         var w = ClientSize.Width;
         var h = ClientSize.Height;
+        var f = DeviceDpi / 96f;
+        var lw = (int)Math.Round(340 * f);
         using (var left = new LinearGradientBrush(
-                   new RectangleF(0, 0, 340, h),
+                   new RectangleF(0, 0, lw, h),
                    UiTheme.PrimaryDark, UiTheme.PrimaryLight, LinearGradientMode.Vertical))
         {
-            g.FillRectangle(left, 0, 0, 340, h);
+            g.FillRectangle(left, 0, 0, lw, h);
         }
 
         // 右側白底
-        g.FillRectangle(Brushes.White, 340, 0, w - 340, h);
+        g.FillRectangle(Brushes.White, lw, 0, w - lw, h);
 
         // 金色分隔線與品牌下方裝飾線
         using (var accent = new SolidBrush(UiTheme.Accent))
         {
-            g.FillRectangle(accent, 337, 0, 3, h);
-            g.FillRectangle(accent, 42, 254, 60, 3);
+            g.FillRectangle(accent, (int)Math.Round(337 * f), 0, Math.Max(3, (int)Math.Round(3 * f)), h);
+            g.FillRectangle(accent, (int)Math.Round(42 * f), (int)Math.Round(254 * f),
+                (int)Math.Round(60 * f), (int)Math.Round(3 * f));
         }
     }
 
@@ -337,7 +341,11 @@ public class LoginForm : Form
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        UiTheme.DrawCard(g, new Rectangle(360, 32, 380, 536), UiTheme.RadiusLg);
+        var f = DeviceDpi / 96f;
+        UiTheme.DrawCard(g, new Rectangle(
+            (int)Math.Round(360 * f), (int)Math.Round(32 * f),
+            (int)Math.Round(380 * f), (int)Math.Round(536 * f)),
+            (int)Math.Round(UiTheme.RadiusLg * f));
     }
 
     private void DoLogin()

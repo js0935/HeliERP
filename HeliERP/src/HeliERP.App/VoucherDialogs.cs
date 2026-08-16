@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -102,6 +102,7 @@ public static class VoucherDialogs
         };
         btnCancel.Click += (s, e) => dlg.Close();
 
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
         return dlg.ShowDialog(owner) == DialogResult.OK ? result : null;
     }
@@ -227,6 +228,7 @@ public static class VoucherDialogs
         };
         btnCancel.Click += (s, e) => dlg.Close();
 
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
         return dlg.ShowDialog(owner) == DialogResult.OK ? result : null;
     }

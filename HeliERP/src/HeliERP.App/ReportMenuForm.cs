@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -216,6 +216,8 @@ public sealed class ReportMenuForm : Form
 
         root.Controls.Add(flow);
         Controls.Add(root);
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 
@@ -471,6 +473,7 @@ public sealed class ReportMenuForm : Form
         dlg.Controls.Add(cancel);
         dlg.AcceptButton = ok;
         dlg.CancelButton = cancel;
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
 
         if (dlg.ShowDialog(this) != DialogResult.OK || combo.SelectedIndex < 0)

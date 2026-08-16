@@ -56,6 +56,17 @@ dotnet build src/HeliERP.App/HeliERP.App.csproj -c Release
 dotnet run --project src/HeliERP.App -c Release
 ```
 
+## 高解析度 / 縮放支援
+
+- 支援 Windows 顯示縮放（含 200% 高 DPI）。PerMonitorV2 環境下手寫表單不會自動縮放，
+  但字體會依 DPI 物理放大，因此所有表單與對話框在顯示時依 `DeviceDpi` 等比放大
+  （`UiTheme.ScaleForDpi`），並額外放大 `DataGridView` 列高／列頭寬、`TreeView` 節點高、
+  `TabControl` 索引籤尺寸、`TableLayoutPanel` 絕對欄寬、`ToolStrip` 按鈕等
+  Scale 不會自動處理的屬性（`UiTheme.ScaleChildren`）。
+- 表單超出螢幕工作區時自動收斂縮放並置中（`UiTheme.ClampToScreen`）；
+  最大化表單的量測會忽略 `Dock=Fill` 的控制，避免誤收斂回縮造成文字溢出。
+- 自繪畫面（如登入視窗的左側品牌漸層與卡片）的繪圖座標依 DPI 比例換算，與控制項一致縮放。
+
 ## 資料庫
 
 - 系統使用既有結構的 `HeliERP.db`（SQLite，142 張業務表）；程式不會自動建立空庫，

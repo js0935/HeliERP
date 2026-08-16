@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.1.0（電子發票字軌管理）
@@ -50,6 +50,8 @@ public sealed class InvoiceTrackForm : Form
             }
         };
         ShortcutHelper.Enable(this, onSearch: LoadLog);
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 
@@ -325,6 +327,7 @@ public sealed class InvoiceTrackForm : Form
         dlg.AcceptButton = btnOk;
         dlg.CancelButton = btnCancel;
         dlg.Controls.AddRange(new Control[] { txtYear, txtMonth, txtTrack, txtStart, txtEnd, chkAuto, lblMsg, btnOk, btnCancel });
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
 
         if (dlg.ShowDialog(this) == DialogResult.OK)

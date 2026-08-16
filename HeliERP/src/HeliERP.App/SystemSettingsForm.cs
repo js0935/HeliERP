@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -141,6 +141,8 @@ public sealed class SystemSettingsForm : Form
 
         root.Controls.Add(flow);
         Controls.Add(root);
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 
@@ -259,6 +261,7 @@ public sealed class SystemSettingsForm : Form
         dlg.CancelButton = btnCancel;
 
         dlg.Controls.AddRange(new Control[] { lblOld, txtOld, lblNew, txtNew, lblAgain, txtAgain, lblMsg, btnOk, btnCancel });
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
         if (dlg.ShowDialog(owner) == DialogResult.OK)
             MessageBox.Show(owner, "密碼已變更，下次登入請使用新密碼。", "變更密碼", MessageBoxButtons.OK, MessageBoxIcon.Information);

@@ -104,6 +104,9 @@ public static class UiTheme
                     {
                         switch (c.Dock)
                         {
+                            case DockStyle.Fill:
+                                // Fill 控制自動伸展填滿剩餘空間，不列入固定需求
+                                break;
                             case DockStyle.Top:
                                 topH += c.Height;
                                 needW = Math.Max(needW, c.PreferredSize.Width);
@@ -163,7 +166,8 @@ public static class UiTheme
     /// PerMonitorV2 環境中手動建置的表單（AutoScale 係數為 1）不縮放，
     /// 但字體依 DPI 物理放大，導致固定尺寸表單的內容溢出；
     /// 此處僅縮放控制項座標與大小、不調整字體，使表單實體尺寸與字體比例一致。
-    /// 自繪座標的表單（如登入畫面）不適用，請勿呼叫。
+    /// 對 DataGridView 列高、TreeView、TabControl、TableLayoutPanel 絕對欄寬、
+    /// ToolStrip 按鈕等 Scale 不會自動處理的屬性一併放大。
     /// </summary>
     public static void ScaleForDpi(Form form)
     {
@@ -175,6 +179,7 @@ public static class UiTheme
                 if (Math.Abs(factor - 1f) < 0.01f) return;
                 form.SuspendLayout();
                 form.Scale(new SizeF(factor, factor));
+                ScaleChildren(form, factor);
                 form.ResumeLayout(true);
             }
             catch
@@ -182,6 +187,55 @@ public static class UiTheme
                 // 縮放失敗時維持原樣，不影響啟動
             }
         };
+    }
+
+    /// <summary>遞迴補償 Control.Scale 不會自動處理的控制項屬性（列高、索引籤尺寸、絕對欄寬等）</summary>
+    private static void ScaleChildren(Control root, float factor)
+    {
+        foreach (Control c in root.Controls)
+        {
+            switch (c)
+            {
+                case DataGridView g:
+                    g.ColumnHeadersHeight = (int)Math.Round(g.ColumnHeadersHeight * factor);
+                    g.RowHeadersWidth = (int)Math.Round(g.RowHeadersWidth * factor);
+                    g.RowTemplate.Height = (int)Math.Round(g.RowTemplate.Height * factor);
+                    break;
+                case TreeView tv:
+                    tv.ItemHeight = (int)Math.Round(tv.ItemHeight * factor);
+                    break;
+                case TabControl tc:
+                    tc.ItemSize = new Size(
+                        (int)Math.Round(tc.ItemSize.Width * factor),
+                        (int)Math.Round(tc.ItemSize.Height * factor));
+                    break;
+                case TableLayoutPanel tlp:
+                    foreach (ColumnStyle cs in tlp.ColumnStyles)
+                        if (cs.SizeType == SizeType.Absolute)
+                            cs.Width = (int)Math.Round(cs.Width * factor);
+                    foreach (RowStyle rs in tlp.RowStyles)
+                        if (rs.SizeType == SizeType.Absolute)
+                            rs.Height = (int)Math.Round(rs.Height * factor);
+                    break;
+                case ToolStrip ts:
+                    foreach (ToolStripItem item in ts.Items)
+                    {
+                        if (!item.AutoSize)
+                        {
+                            item.Size = new Size(
+                                (int)Math.Round(item.Size.Width * factor),
+                                (int)Math.Round(item.Size.Height * factor));
+                        }
+                        item.Padding = new Padding(
+                            (int)Math.Round(item.Padding.Left * factor),
+                            (int)Math.Round(item.Padding.Top * factor),
+                            (int)Math.Round(item.Padding.Right * factor),
+                            (int)Math.Round(item.Padding.Bottom * factor));
+                    }
+                    break;
+            }
+            ScaleChildren(c, factor);
+        }
     }
 
     /// <summary>

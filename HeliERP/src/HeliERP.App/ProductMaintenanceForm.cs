@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -110,6 +110,8 @@ public class ProductMaintenanceForm : Form
         UpdateCount();
 
         ShortcutHelper.Enable(this, onDelete: DeleteRows, onSearch: () => _txtSearch.Focus());
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

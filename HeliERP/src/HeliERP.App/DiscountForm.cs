@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.1.0（新增折讓作業）
@@ -69,6 +69,8 @@ public sealed class DiscountForm : Form
         };
 
         ShortcutHelper.Enable(this, onDelete: DeleteSelected, onSearch: LoadList);
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

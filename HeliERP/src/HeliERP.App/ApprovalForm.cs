@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.1.0（核准中心）
@@ -144,6 +144,8 @@ public sealed class ApprovalForm : Form
             }
         };
         ShortcutHelper.Enable(this, onSearch: () => _txtKeyword.Focus(), onDelete: () => { }, onAdd: () => ShowSettings());
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 
@@ -275,6 +277,7 @@ public sealed class ApprovalForm : Form
         dlg.Controls.Add(btnSave);
         dlg.Controls.Add(btnCancel);
 
+        UiTheme.ScaleForDpi(dlg);
         UiTheme.ClampToScreen(dlg);
         dlg.ShowDialog(this);
     }

@@ -28,13 +28,13 @@ public class FirstRunSetupForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(680, 392);
+        ClientSize = new Size(680, 440);
         UiTheme.Apply(this);
 
         Controls.Add(UiTheme.BuildHeader("基本資料設定", "首次使用請填寫公司基本資料（公司名稱必填）"));
 
-        // ── 基本資料卡片 ──
-        var card = new Panel { Location = new Point(UiTheme.SpacingXl, UiTheme.SpacingXl + 4), Size = new Size(632, 306) };
+        // ── 基本資料卡片（置於標題列下方，避免重疊遮蔽）──
+        var card = new Panel { Location = new Point(UiTheme.SpacingXl, 76), Size = new Size(632, 306) };
         UiTheme.StyleCardPanel(card);
 
         var c = _config.Company;
@@ -83,7 +83,7 @@ public class FirstRunSetupForm : Form
         var btnCancel = new ModernButton { Text = "取　消", Size = new Size(100, 40), Location = new Point(112, 0), IsPrimary = false };
         btnCancel.Click += (s, e) => Close();
 
-        var btnRow = new Panel { Location = new Point(UiTheme.SpacingXl, 346), Size = new Size(632, 40) };
+        var btnRow = new Panel { Location = new Point(UiTheme.SpacingXl, 388), Size = new Size(632, 40) };
         btnRow.Controls.AddRange(new Control[] { btnOk, btnCancel, _lblMsg });
 
         Controls.AddRange(new Control[] { card, btnRow });

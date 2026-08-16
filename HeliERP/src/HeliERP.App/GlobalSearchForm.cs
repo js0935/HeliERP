@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.1.0（全域快速搜尋）
@@ -121,6 +121,8 @@ public sealed class GlobalSearchForm : Form
         };
 
         Shown += (s, e) => _txtSearch.Focus();
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

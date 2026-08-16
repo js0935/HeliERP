@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0
@@ -77,6 +77,8 @@ public sealed class AccountingModuleForm : Form
                 else if (_tabs.SelectedIndex == 2) LoadJournals();
                 else LoadVouchers();
             });
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

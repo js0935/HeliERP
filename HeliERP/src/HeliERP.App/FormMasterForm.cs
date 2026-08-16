@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 // 軟體屬名：禾秝軟體開發團隊
 // 代碼：洪俊士
 // 版本：1.0.0（表單式主檔維護框架）
@@ -103,6 +103,8 @@ public sealed class FormMasterForm : Form
         BuildUi(pagesFinal);
         ReloadList();
         UpdateStatus();
+        UiTheme.ScaleForDpi(this);
+
         UiTheme.ClampToScreen(this);
     }
 

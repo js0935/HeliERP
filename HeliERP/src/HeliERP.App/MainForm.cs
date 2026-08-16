@@ -19,6 +19,7 @@ public class MainForm : Form
     private readonly DbConfig _config;
     private readonly AppUser _user;
     private readonly ToolTip _cardTip = new() { AutoPopDelay = 6000, InitialDelay = 350, ReshowDelay = 120 };
+    private FlowLayoutPanel? _sidebarFlow;
 
     /// <summary>模組按鈕資料</summary>
     private record ModuleDef(string Name, string Desc, Func<Form> Open);
@@ -83,6 +84,9 @@ public class MainForm : Form
         BuildStatusBar();
         Shown += (s, e) =>
         {
+            // 側欄捲回頂部（初始或縮放後可能停在底部）
+            if (_sidebarFlow is not null)
+                _sidebarFlow.AutoScrollPosition = new Point(0, 0);
             try { BackupService.AutoBackupIfDue(_config); }
             catch { /* 備份失敗不阻擋啟動 */ }
             try
@@ -318,6 +322,10 @@ public class MainForm : Form
         };
         flow.Controls.Add(lblVer);
 
+        // 建立後強制捲回頂部：Form.Scale（DPI 縮放）或自動捲動可能讓側欄滑到底部
+        flow.HandleCreated += (s, e) => flow.AutoScrollPosition = new Point(0, 0);
+
+        _sidebarFlow = flow;
         sidebar.Controls.Add(flow);
         return sidebar;
     }

@@ -31,7 +31,21 @@ public class ModernButton : Button
     }
 
     /// <summary>側邊導覽模式：深色半透明底、懸停亮、啟用時主色底＋左強調邊</summary>
-    public bool SidebarMode { get; set; }
+    private bool _sidebarMode;
+    public bool SidebarMode
+    {
+        get => _sidebarMode;
+        set
+        {
+            _sidebarMode = value;
+            if (value)
+            {
+                // 導覽按鈕不取得焦點：避免 FlowLayoutPanel 自動捲動把側欄拉回焦點按鈕位置
+                SetStyle(ControlStyles.Selectable, false);
+                TabStop = false;
+            }
+        }
+    }
 
     /// <summary>側邊導覽啟用狀態（目前所在模組）</summary>
     public bool IsActive { get; set; }

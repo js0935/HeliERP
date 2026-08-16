@@ -728,7 +728,7 @@ public class MainForm : Form
 
     private void BuildStatusBar()
     {
-        var status = new StatusStrip { SizingGrip = false };
+        var status = new StatusStrip { SizingGrip = false, BackColor = UiTheme.Card, Padding = new Padding(12, 2, 8, 2) };
         var company = _config.Company;
         status.Items.Add(new ToolStripStatusLabel($"{CompanyTitle()}　統一編號 {company.TaxId}"));
         status.Items.Add(new ToolStripStatusLabel("  |  "));

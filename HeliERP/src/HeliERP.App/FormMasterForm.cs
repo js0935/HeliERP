@@ -187,6 +187,7 @@ public sealed class FormMasterForm : Form
         toolbar.Items.Add(new ToolStripButton("取消", null, (s, e) => CancelEdit()) { DisplayStyle = ToolStripItemDisplayStyle.Text });
         toolbar.Items.Add(new ToolStripSeparator());
         toolbar.Items.Add(new ToolStripButton("重新整理", null, (s, e) => RefreshAll()) { DisplayStyle = ToolStripItemDisplayStyle.Text });
+        toolbar.Items.Add(new ToolStripButton("匯出清單", null, (s, e) => ExportList()) { DisplayStyle = ToolStripItemDisplayStyle.Text });
         toolbar.Items.Add(new ToolStripSeparator());
         toolbar.Items.Add(new ToolStripButton("<<", null, (s, e) => MoveSelection(0, true)) { DisplayStyle = ToolStripItemDisplayStyle.Text, ToolTipText = "第一筆" });
         toolbar.Items.Add(new ToolStripButton("<", null, (s, e) => MoveSelection(-1, false)) { DisplayStyle = ToolStripItemDisplayStyle.Text, ToolTipText = "上一筆" });
@@ -205,6 +206,17 @@ public sealed class FormMasterForm : Form
         toolbar.Items.Add(_lblStatus);
         Controls.Add(toolbar);
         toolbar.Dock = DockStyle.Top;
+    }
+
+    /// <summary>匯出左側清單資料為 CSV / Excel</summary>
+    private void ExportList()
+    {
+        if (_listDt.Rows.Count == 0)
+        {
+            MessageBox.Show(this, "目前沒有資料可匯出。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        ExportService.ExportAny(this, _listDt, _tableName, $"匯出「{_tableName}」清單");
     }
 
     private void BuildStatusBar()

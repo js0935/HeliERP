@@ -87,8 +87,7 @@ public class ModernButton : Button
         {
             if (IsActive)
             {
-                top = UiTheme.SidebarActive;
-                bottom = UiTheme.PrimaryDark;
+                top = bottom = UiTheme.SidebarActive;
                 UiTheme.FillRounded(g, rect, radius, top, bottom);
                 using var bar = new SolidBrush(UiTheme.Accent);
                 g.FillRectangle(bar, 0, 8, 4, Height - 16);

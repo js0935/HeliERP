@@ -137,7 +137,7 @@ public sealed class BillModuleForm : Form
 
     private void BuildStatusBar()
     {
-        var bar = new StatusStrip { SizingGrip = false };
+        var bar = new StatusStrip { SizingGrip = false, BackColor = UiTheme.Card, Padding = new Padding(12, 2, 8, 2) };
         _lblCount.Text = "共 0 筆";
         _lblTotal.Text = "";
         bar.Items.Add(_lblCount);

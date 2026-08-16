@@ -67,6 +67,11 @@ public class MainForm : Form
                 using var search = new GlobalSearchForm();
                 search.ShowDialog(this);
             }
+            else if (e.KeyCode == Keys.F1)
+            {
+                using var help = new HelpForm(_modules);
+                help.ShowDialog(this);
+            }
         };
 
         AuditService.CurrentAccount = _user.UserId;

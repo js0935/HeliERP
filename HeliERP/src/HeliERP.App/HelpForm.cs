@@ -57,6 +57,7 @@ public sealed class HelpForm : Form
         dt.Columns.Add("快捷鍵", typeof(string));
         dt.Columns.Add("功能", typeof(string));
         dt.Columns.Add("適用範圍", typeof(string));
+        dt.Rows.Add("F1", "開啟說明中心", "主畫面");
         dt.Rows.Add("F2", "新增資料", "各資料維護畫面");
         dt.Rows.Add("F3", "修改／編輯資料", "各資料維護畫面");
         dt.Rows.Add("F4", "刪除資料", "各資料維護畫面");

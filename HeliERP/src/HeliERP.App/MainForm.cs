@@ -52,7 +52,7 @@ public class MainForm : Form
         };
         var company = config.Company;
 
-        Text = $"{company.CompanyName} - 企業資源規劃系統";
+        Text = $"{CompanyTitle()} - 企業資源規劃系統";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
         MinimumSize = new Size(1024, 700);
@@ -352,7 +352,11 @@ public class MainForm : Form
         var c = _config.Company;
         var cards = new (string Title, string[] Lines, Color Accent)[]
         {
-            ("公司資訊", new[] { c.CompanyName, $"統一編號：{c.TaxId}", $"電話：{c.Phone}" }, UiTheme.Primary),
+            ("公司資訊", new[]
+            {
+                string.IsNullOrWhiteSpace(c.CompanyName) ? "（尚未設定公司資料）" : c.CompanyName,
+                $"統一編號：{c.TaxId}", $"電話：{c.Phone}",
+            }, UiTheme.Primary),
         };
         var cardsFlow = new FlowLayoutPanel
         {
@@ -694,11 +698,18 @@ public class MainForm : Form
         return card;
     }
 
+    /// <summary>主視窗標題用公司名稱；尚未設定時顯示 HeliERP</summary>
+    private string CompanyTitle()
+    {
+        var name = _config.Company.CompanyName;
+        return string.IsNullOrWhiteSpace(name) ? "HeliERP" : name;
+    }
+
     private void BuildStatusBar()
     {
         var status = new StatusStrip { SizingGrip = false };
         var company = _config.Company;
-        status.Items.Add(new ToolStripStatusLabel($"{company.CompanyName}　統一編號 {company.TaxId}"));
+        status.Items.Add(new ToolStripStatusLabel($"{CompanyTitle()}　統一編號 {company.TaxId}"));
         status.Items.Add(new ToolStripStatusLabel("  |  "));
         status.Items.Add(new ToolStripStatusLabel($"使用者：{_user.DisplayName}（{_user.UserId}）"));
         status.Items.Add(new ToolStripStatusLabel("  |  "));
@@ -815,7 +826,7 @@ public class MainForm : Form
         {
             DbManager.DatabasePath = _config.DatabasePath;
             SchemaReader.Reload();
-            Text = $"{_config.Company.CompanyName} - 企業資源規劃系統";
+            Text = $"{CompanyTitle()} - 企業資源規劃系統";
         }
     }
 
@@ -842,7 +853,7 @@ public class MainForm : Form
     {
         var c = _config.Company;
         MessageBox.Show(
-            $"{c.CompanyName}\n企業資源規劃系統 v1.0.0\n\n" +
+            $"{CompanyTitle()}\n企業資源規劃系統 v1.0.0\n\n" +
             "軟體屬名：禾秝軟體開發團隊\n代碼：洪俊士\n版本：1.0.0\n\n" +
             $"資料庫：{DbManager.DatabasePath}\n\n© 2026 {c.Owner}",
             "關於本系統", MessageBoxButtons.OK, MessageBoxIcon.Information);

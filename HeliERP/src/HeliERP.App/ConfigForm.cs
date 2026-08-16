@@ -100,6 +100,8 @@ public class ConfigForm : Form
     private string CompanyText()
     {
         var c = _config.Company;
+        if (string.IsNullOrWhiteSpace(c.CompanyName))
+            return "尚未設定公司資料（請填寫，報表、登入畫面與主視窗標題將使用此資料）";
         return $"{c.CompanyName}（統一編號 {c.TaxId}）\r\n負責人：{c.Owner}　電話：{c.Phone}\r\n地址：{c.Address}\r\nEmail：{c.Email}";
     }
 

@@ -313,10 +313,15 @@ public class LoginForm : Form
             g.FillRectangle(accent, 337, 0, 3, designH);
 
         // 品牌文字（DrawString 向量字形會隨 ScaleTransform 正確放大）
-        g.DrawString("禾秝安全系統工程", UiTheme.Font(20F, FontStyle.Bold),
+        var name = _config.Company.CompanyName;
+        var brand = string.IsNullOrWhiteSpace(name) ? "HeliERP" : name;
+        var sub = string.IsNullOrWhiteSpace(name) ? "企業資源規劃系統"
+            : name.EndsWith("有限公司") ? "" : "有限公司";
+        g.DrawString(brand, UiTheme.Font(20F, FontStyle.Bold),
             new SolidBrush(Color.White), new RectangleF(40, 150, 260, 62));
-        g.DrawString("有限公司", UiTheme.Font(12F),
-            new SolidBrush(Color.FromArgb(200, 255, 255, 255)), new RectangleF(40, 212, 260, 26));
+        if (sub.Length > 0)
+            g.DrawString(sub, UiTheme.Font(12F),
+                new SolidBrush(Color.FromArgb(200, 255, 255, 255)), new RectangleF(40, 212, 260, 26));
         using (var accent = new SolidBrush(UiTheme.Accent))
             g.FillRectangle(accent, 42, 254, 60, 3);
         g.DrawString("企業資源規劃系統 ERP", UiTheme.Font(13F),

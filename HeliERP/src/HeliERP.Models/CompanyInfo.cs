@@ -5,26 +5,26 @@
 // ════════════════════════════════════════════════════════
 namespace HeliERP.Models;
 
-/// <summary>公司基本資料（原 DataLinks.mdb 對應）</summary>
+/// <summary>公司基本資料（原 DataLinks.mdb 對應）；預設為空，由使用者於系統設定填寫</summary>
 public class CompanyInfo
 {
     /// <summary>公司名稱</summary>
-    public string CompanyName { get; set; } = "禾秝安全系統工程有限公司";
+    public string CompanyName { get; set; } = "";
 
     /// <summary>統一編號</summary>
-    public string TaxId { get; set; } = "22619219";
+    public string TaxId { get; set; } = "";
 
     /// <summary>負責人</summary>
-    public string Owner { get; set; } = "何正國";
+    public string Owner { get; set; } = "";
 
     /// <summary>聯絡電話</summary>
-    public string Phone { get; set; } = "(02)2593-2101";
+    public string Phone { get; set; } = "";
 
     /// <summary>登記地址</summary>
-    public string Address { get; set; } = "臺北市新生北路3段79-2號3F";
+    public string Address { get; set; } = "";
 
     /// <summary>電子郵件</summary>
-    public string Email { get; set; } = "karahui@ms95.url.com.tw";
+    public string Email { get; set; } = "";
 
     /// <summary>網址</summary>
     public string Website { get; set; } = "";

@@ -207,8 +207,8 @@ public static class PoOrderService
 
     // ==================== 帶入查詢（畫面使用） ====================
 
-    /// <summary>採訂單清單（依類別、單號倒序）</summary>
-    public static DataTable LoadPoList(string 單據類別, string? 單號 = null)
+    /// <summary>採訂單清單（依類別、單號前綴、日期範圍，單號倒序）</summary>
+    public static DataTable LoadPoList(string 單據類別, string? 單號 = null, string? 起日 = null, string? 迄日 = null)
     {
         var where = new List<string> { "m.[單據類別] = $k" };
         var pars = new List<SqliteParameter> { DbManager.Param("$k", 單據類別) };
@@ -216,6 +216,16 @@ public static class PoOrderService
         {
             where.Add("m.[交易單號] LIKE $n");
             pars.Add(DbManager.Param("$n", 單號.Trim() + "%"));
+        }
+        if (!string.IsNullOrWhiteSpace(起日))
+        {
+            where.Add("m.[交易日期] >= $f");
+            pars.Add(DbManager.Param("$f", 起日));
+        }
+        if (!string.IsNullOrWhiteSpace(迄日))
+        {
+            where.Add("m.[交易日期] <= $t");
+            pars.Add(DbManager.Param("$t", 迄日));
         }
         return DbManager.QueryTable(
             "SELECT m.[單據副碼], m.[交易單號], m.[交易日期], m.[交貨日期], " +

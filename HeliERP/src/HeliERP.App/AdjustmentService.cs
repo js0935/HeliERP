@@ -208,8 +208,8 @@ public static class AdjustmentService
 
     // ==================== 帶入查詢（畫面使用） ====================
 
-    /// <summary>調整單清單（依單號倒序）</summary>
-    public static DataTable LoadAdjustmentList(string? 單號 = null)
+    /// <summary>調整單清單（單號前綴＋日期範圍＋原因，依單號倒序）</summary>
+    public static DataTable LoadAdjustmentList(string? 單號 = null, string? 起日 = null, string? 迄日 = null, string? 原因 = null)
     {
         var where = new List<string> { "[單據類別] = $k" };
         var pars = new List<SqliteParameter> { DbManager.Param("$k", KindName) };
@@ -217,6 +217,21 @@ public static class AdjustmentService
         {
             where.Add("[交易單號] LIKE $n");
             pars.Add(DbManager.Param("$n", 單號.Trim() + "%"));
+        }
+        if (!string.IsNullOrWhiteSpace(起日))
+        {
+            where.Add("[交易日期] >= $f");
+            pars.Add(DbManager.Param("$f", 起日));
+        }
+        if (!string.IsNullOrWhiteSpace(迄日))
+        {
+            where.Add("[交易日期] <= $t");
+            pars.Add(DbManager.Param("$t", 迄日));
+        }
+        if (!string.IsNullOrWhiteSpace(原因))
+        {
+            where.Add("COALESCE([備註],'') LIKE $r");
+            pars.Add(DbManager.Param("$r", "%" + 原因 + "%"));
         }
         return DbManager.QueryTable(
             "SELECT [單據副碼], [交易單號], [交易日期], COALESCE([備註],'') AS [備註], " +

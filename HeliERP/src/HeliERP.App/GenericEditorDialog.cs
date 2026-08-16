@@ -21,6 +21,7 @@ public sealed class GenericEditorDialog : Form
     private readonly DataRow _row;
     private readonly bool _isNew;
     private readonly List<(ColumnInfo Col, Control Ctrl)> _fields = new();
+    private bool _continueNew;
 
     private GenericEditorDialog(TableInfo table, DataRow row)
     {
@@ -99,9 +100,9 @@ public sealed class GenericEditorDialog : Form
 
         // ── 按鈕 ──
         int w = hasWide ? 640 : 560;
-        var btnOk = new ModernButton { Text = "確定", Size = new Size(96, 40), Location = new Point(w - 226, y + 10), IsPrimary = true };
-        var btnCancel = new ModernButton { Text = "取消", Size = new Size(80, 40), Location = new Point(w - 118, y + 10), IsPrimary = false, DrawShadow = false };
-        btnOk.Click += (s, e) =>
+        var btnOk = new ModernButton { Text = "確定", Size = new Size(96, 40), Location = new Point(w - 244, y + 10), IsPrimary = false, DrawShadow = false };
+        var btnCancel = new ModernButton { Text = "取消", Size = new Size(96, 40), Location = new Point(w - 134, y + 10), IsPrimary = false, DrawShadow = false };
+        void Commit(bool cont)
         {
             string? err = Validate();
             if (err is not null)
@@ -110,12 +111,24 @@ public sealed class GenericEditorDialog : Form
                 return;
             }
             WriteBack();
+            _continueNew = cont;
             DialogResult = DialogResult.OK;
-        };
+        }
+        btnOk.Click += (s, e) => Commit(false);
         btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
         Controls.Add(btnOk);
         Controls.Add(btnCancel);
-        AcceptButton = btnOk;
+        if (_isNew)
+        {
+            var btnContinue = new ModernButton { Text = "新增並繼續", Size = new Size(96, 40), Location = new Point(w - 354, y + 10), IsPrimary = true };
+            btnContinue.Click += (s, e) => Commit(true);
+            Controls.Add(btnContinue);
+            AcceptButton = btnContinue;
+        }
+        else
+        {
+            AcceptButton = btnOk;
+        }
         CancelButton = btnCancel;
 
         ClientSize = new Size(w, Math.Min(y + 72, 720));
@@ -124,13 +137,14 @@ public sealed class GenericEditorDialog : Form
         UiTheme.ClampToScreen(this);
     }
 
-    /// <summary>顯示新增/編輯對話框，確定後值已寫入資料列。回傳是否按確定。</summary>
-    public static bool ShowDialog(IWin32Window? owner, string tableName, DataRow row)
+    /// <summary>顯示新增/編輯對話框，確定後值已寫入資料列。回傳 (是否確定, 是否要求新增並繼續)。</summary>
+    public static (bool Ok, bool Continue) ShowDialog(IWin32Window? owner, string tableName, DataRow row)
     {
         var table = SchemaReader.GetTable(tableName)
             ?? throw new InvalidOperationException($"找不到資料表「{tableName}」");
         using var dlg = new GenericEditorDialog(table, row);
-        return dlg.ShowDialog(owner) == DialogResult.OK;
+        bool ok = dlg.ShowDialog(owner) == DialogResult.OK;
+        return (ok, dlg._continueNew);
     }
 
     // ── 欄位順序規劃 ──

@@ -167,11 +167,14 @@ public class GenericTableForm : Form
     private void AddRowDialog()
     {
         var row = _dt.NewRow();
-        if (GenericEditorDialog.ShowDialog(this, _tableName, row))
+        var (ok, cont) = GenericEditorDialog.ShowDialog(this, _tableName, row);
+        if (ok)
         {
             _dt.Rows.Add(row);
             _grid.CurrentCell = _grid.Rows[_dt.Rows.Count - 1].Cells[0];
             UpdateCount();
+            if (cont)
+                AddRowDialog();
         }
     }
 
@@ -184,7 +187,7 @@ public class GenericTableForm : Form
         }
         if (gridRow.DataBoundItem is not DataRowView drv)
             return;
-        if (GenericEditorDialog.ShowDialog(this, _tableName, drv.Row))
+        if (GenericEditorDialog.ShowDialog(this, _tableName, drv.Row).Ok)
             UpdateCount();
     }
 

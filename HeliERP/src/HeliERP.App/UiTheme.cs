@@ -86,6 +86,15 @@ public static class UiTheme
             try
             {
                 var wa = Screen.FromControl(form).WorkingArea;
+                // 實體基準：工作區邏輯尺寸換算成實體像素，與（可能已依 DPI 縮放的）表單實體尺寸比對
+                var dpiScale = form.DeviceDpi / 96f;
+                if (dpiScale > 1.001f)
+                {
+                    wa.X = (int)Math.Round(wa.X * dpiScale);
+                    wa.Y = (int)Math.Round(wa.Y * dpiScale);
+                    wa.Width = (int)Math.Round(wa.Width * dpiScale);
+                    wa.Height = (int)Math.Round(wa.Height * dpiScale);
+                }
 
                 if (form.WindowState == FormWindowState.Maximized)
                 {
@@ -147,6 +156,32 @@ public static class UiTheme
 
         form.Load += (s, e) => DoClamp();
         form.Shown += (s, e) => DoClamp();
+    }
+
+    /// <summary>
+    /// 高 DPI（200% 縮放）下依 DeviceDpi 等比放大表單與控制項。
+    /// PerMonitorV2 環境中手動建置的表單（AutoScale 係數為 1）不縮放，
+    /// 但字體依 DPI 物理放大，導致固定尺寸表單的內容溢出；
+    /// 此處僅縮放控制項座標與大小、不調整字體，使表單實體尺寸與字體比例一致。
+    /// 自繪座標的表單（如登入畫面）不適用，請勿呼叫。
+    /// </summary>
+    public static void ScaleForDpi(Form form)
+    {
+        form.HandleCreated += (s, e) =>
+        {
+            try
+            {
+                var factor = form.DeviceDpi / 96f;
+                if (Math.Abs(factor - 1f) < 0.01f) return;
+                form.SuspendLayout();
+                form.Scale(new SizeF(factor, factor));
+                form.ResumeLayout(true);
+            }
+            catch
+            {
+                // 縮放失敗時維持原樣，不影響啟動
+            }
+        };
     }
 
     /// <summary>

@@ -46,7 +46,7 @@ public sealed class BillModuleForm : Form
         _dtTo.Value = DateTime.Today.AddYears(1);
         LoadList();
 
-        ShortcutHelper.Enable(this, () => EditBill(null), () => EditBill(GetSelectedRow()), DeleteSelected, LoadList);
+        ShortcutHelper.Enable(this, () => EditBill(null), () => EditBill(GetSelectedRow()), DeleteSelected, LoadList, LoadList);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

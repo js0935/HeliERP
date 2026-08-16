@@ -60,6 +60,7 @@ public sealed class HelpForm : Form
         dt.Rows.Add("F2", "新增資料", "各資料維護畫面");
         dt.Rows.Add("F3", "修改／編輯資料", "各資料維護畫面");
         dt.Rows.Add("F4", "刪除資料", "各資料維護畫面");
+        dt.Rows.Add("F5", "重整／重新載入資料", "查詢與維護畫面");
         dt.Rows.Add("Ctrl + F", "搜尋／查詢", "各資料維護畫面");
         dt.Rows.Add("Ctrl + K", "全域快速搜尋", "主畫面");
         dt.Rows.Add("Esc", "關閉視窗／取消", "對話框");

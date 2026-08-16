@@ -105,6 +105,7 @@ public class RepairModuleForm : Form
                 _lblStatus.Text = "狀態: 修改中";
             },
             DeleteBill,
+            LoadList,
             LoadList);
         UiTheme.ScaleForDpi(this);
 

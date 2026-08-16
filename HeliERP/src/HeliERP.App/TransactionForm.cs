@@ -81,7 +81,7 @@ public class TransactionForm : Form
         ReloadCustomerCombo();
         LoadList();
 
-        ShortcutHelper.Enable(this, NewBill, EditBill, DeleteBill, LoadList);
+        ShortcutHelper.Enable(this, NewBill, EditBill, DeleteBill, LoadList, LoadList);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

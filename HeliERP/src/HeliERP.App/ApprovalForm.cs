@@ -144,7 +144,7 @@ public sealed class ApprovalForm : Form
                 _lblStatus.Text = "狀態: 載入失敗 - " + ex.Message;
             }
         };
-        ShortcutHelper.Enable(this, onSearch: () => _txtKeyword.Focus(), onDelete: () => { }, onAdd: () => ShowSettings());
+        ShortcutHelper.Enable(this, onSearch: () => _txtKeyword.Focus(), onDelete: () => { }, onAdd: () => ShowSettings(), onReload: LoadFlows);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

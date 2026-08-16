@@ -66,7 +66,7 @@ public sealed class AccountReceivableForm : Form
             _lblStatus.Text = "狀態: 就緒";
         };
 
-        ShortcutHelper.Enable(this, onSearch: LoadSummary);
+        ShortcutHelper.Enable(this, onSearch: LoadSummary, onReload: LoadSummary);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

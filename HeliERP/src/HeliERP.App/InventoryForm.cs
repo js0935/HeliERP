@@ -84,7 +84,7 @@ public sealed class InventoryForm : Form
             }
         };
 
-        ShortcutHelper.Enable(this, onSearch: LoadStock);
+        ShortcutHelper.Enable(this, onSearch: LoadStock, onReload: LoadStock);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

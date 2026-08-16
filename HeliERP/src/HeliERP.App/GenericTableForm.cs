@@ -137,7 +137,7 @@ public class GenericTableForm : Form
         if (!string.IsNullOrEmpty(initialFilter))
             _txtSearch.Text = initialFilter;
 
-        ShortcutHelper.Enable(this, onDelete: _canEdit ? DeleteRows : null, onSearch: () => _txtSearch.Focus());
+        ShortcutHelper.Enable(this, onDelete: _canEdit ? DeleteRows : null, onSearch: () => _txtSearch.Focus(), onReload: ApplyFilter);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

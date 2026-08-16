@@ -68,7 +68,7 @@ public sealed class DiscountForm : Form
             }
         };
 
-        ShortcutHelper.Enable(this, onDelete: DeleteSelected, onSearch: LoadList);
+        ShortcutHelper.Enable(this, onDelete: DeleteSelected, onSearch: LoadList, onReload: LoadList);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);

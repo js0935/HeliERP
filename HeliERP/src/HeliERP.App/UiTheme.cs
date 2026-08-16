@@ -240,7 +240,7 @@ public static class UiTheme
     }
 
     /// <summary>
-    /// 統一的表單標題列：標題 + 副標題 + 金色短線。
+    /// 統一的表單標題列：標題 + 副標題 + 強調短線。
     /// 回傳 Top-Dock Panel，各表單於建構時第一個加入（置於工具列上方）。
     /// </summary>
     public static Panel BuildHeader(string title, string subtitle = "", int height = 64)
@@ -441,44 +441,37 @@ public static class UiTheme
         picker.CalendarTrailingForeColor = TextSub;
     }
 
-    /// <summary>TabControl 統一風格：自繪標籤，選取=主色底白字＋頂金線，懸停=淺藍底，未選取=白底主色字</summary>
+    /// <summary>TabControl 統一風格：白底頁籤、選取頁籤深藍字＋底部藍線、未選取淺灰字</summary>
     public static void StyleTabControl(TabControl tabs)
     {
         tabs.DrawMode = TabDrawMode.OwnerDrawFixed;
         tabs.SizeMode = TabSizeMode.Fixed;
-        tabs.ItemSize = new Size(118, 36);
+        tabs.ItemSize = new Size(130, 36);
+        tabs.Padding = new Point(20, 6);
+        tabs.Appearance = TabAppearance.Normal;
         foreach (TabPage page in tabs.TabPages)
             page.BackColor = Card;
-        int hoverIndex = -1;
-        tabs.MouseMove += (s, e) =>
-        {
-            int ni = -1;
-            for (int i = 0; i < tabs.TabCount; i++)
-                if (tabs.GetTabRect(i).Contains(e.Location)) { ni = i; break; }
-            if (ni != hoverIndex) { hoverIndex = ni; tabs.Invalidate(); }
-        };
-        tabs.MouseLeave += (s, e) => { if (hoverIndex != -1) { hoverIndex = -1; tabs.Invalidate(); } };
         tabs.DrawItem += (s, e) =>
         {
-            var page = tabs.TabPages[e.Index];
+            var g = e.Graphics;
+            var rect = tabs.GetTabRect(e.Index);
             bool selected = e.Index == tabs.SelectedIndex;
-            var rect = e.Bounds;
-            Color back = selected ? Primary : (e.Index == hoverIndex ? SelectBack : Card);
-            using var fill = new SolidBrush(back);
-            e.Graphics.FillRectangle(fill, rect);
+            using (var bg = new SolidBrush(selected ? Card : Color.FromArgb(243, 243, 245)))
+                g.FillRectangle(bg, rect);
             if (selected)
             {
                 using var line = new SolidBrush(Accent);
-                e.Graphics.FillRectangle(line, rect.X, rect.Y, rect.Width, 3);
+                g.FillRectangle(line, rect.X, rect.Bottom - 3, rect.Width, 3);
             }
-            float scale = tabs.DeviceDpi / 96f;
-            Color fore = selected ? Color.White : (e.Index == hoverIndex ? Primary : PrimaryLight);
-            TextRenderer.DrawText(e.Graphics, page.Text, Font(10.5F * scale, FontStyle.Bold), rect,
-                fore, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            var fore = selected ? PrimaryDark : TextSub;
+            var font = Font(10.5F, selected ? FontStyle.Bold : FontStyle.Regular);
+            TextRenderer.DrawText(g, tabs.TabPages[e.Index].Text, font,
+                new Rectangle(rect.X, rect.Y - 1, rect.Width, rect.Height),
+                fore, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         };
     }
 
-    /// <summary>TreeView 統一風格：全列選取、自繪節點、選取列金條指示</summary>
+    /// <summary>TreeView 統一風格：全列選取、自繪節點、選取列藍色指示</summary>
     public static void StyleTreeView(TreeView tree)
     {
         tree.BackColor = Card;
@@ -537,7 +530,7 @@ public static class UiTheme
         }
     }
 
-    /// <summary>卡片容器：白底圓角邊框 + 上緣金色短線（配合 StyleCardPanel 使用時加陰影）</summary>
+    /// <summary>卡片容器：白底圓角邊框 + 上緣強調短線</summary>
     public static void StyleCardPanel(Panel panel, int padding = SpacingLg)
     {
         panel.BackColor = Card;

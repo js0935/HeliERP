@@ -30,7 +30,7 @@ public class ModernButton : Button
         set { _isPrimary = value; UpdateColors(); Invalidate(); }
     }
 
-    /// <summary>側邊導覽模式：深色半透明底、懸停亮、啟用時主色底＋左金邊</summary>
+    /// <summary>側邊導覽模式：深色半透明底、懸停亮、啟用時主色底＋左強調邊</summary>
     public bool SidebarMode { get; set; }
 
     /// <summary>側邊導覽啟用狀態（目前所在模組）</summary>
@@ -39,7 +39,7 @@ public class ModernButton : Button
     /// <summary>側邊導覽灰化狀態（規劃中模組）：文字更淡、不強調 hover</summary>
     public bool SidebarMuted { get; set; }
 
-    /// <summary>懸停時顯示金色邊框（導覽按鈕用）</summary>
+    /// <summary>懸停時顯示強調色邊框（導覽按鈕用）</summary>
     public bool AccentBorder { get; set; }
 
     public ModernButton()

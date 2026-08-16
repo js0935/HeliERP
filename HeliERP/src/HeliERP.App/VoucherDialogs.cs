@@ -82,6 +82,7 @@ public static class VoucherDialogs
         else
         {
             cmbKind.SelectedIndex = 0;
+            txtNo.Text = NextVoucherNo();
         }
 
         Dictionary<string, object?>? result = null;
@@ -244,6 +245,20 @@ public static class VoucherDialogs
     }
 
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>傳票編號自動帶號：YYMMDD＋當日 4 位流水（可再手動修改）。</summary>
+    private static string NextVoucherNo()
+    {
+        var today = DateTime.Now.ToString("yyMMdd");
+        var rows = DbManager.QueryTable(
+            "SELECT [傳票編號] FROM [傳票主檔] WHERE [傳票編號] LIKE $p ORDER BY [傳票編號] DESC LIMIT 1",
+            DbManager.Param("$p", today + "%"));
+        if (rows.Rows.Count == 0) return today + "0001";
+        var last = Convert.ToString(rows.Rows[0][0]) ?? "";
+        if (last.Length >= 10 && int.TryParse(last.Substring(6), out var seq))
+            return today + (seq + 1).ToString("D4");
+        return today + "0001";
+    }
 
     private static DateTime? ParseDate(object v)
     {

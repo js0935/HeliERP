@@ -145,7 +145,7 @@ public class MainForm : Form
         var mHelp = new ToolStripMenuItem("說明(&H)");
         mHelp.DropDownItems.Add("快捷鍵與操作說明(&K)", null, (s, e) =>
         {
-            using var help = new HelpForm();
+            using var help = new HelpForm(_modules);
             help.ShowDialog(this);
         });
         mHelp.DropDownItems.Add("關於本系統(&A)", null, (s, e) => ShowAbout());

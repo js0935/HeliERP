@@ -69,34 +69,73 @@ public static class DiscountService
 
     public sealed record SaveResult(string 折讓單號, long 單據副碼);
 
-    // ── 執行期表結構補欄（折讓明細沿用舊結構，補上報表所需欄位）──
-    private static readonly (string Col, string Decl)[] 折讓明細補欄 =
+    // ── 執行期表結構遷移（折讓主檔／明細沿用舊結構，補上作業與報表所需欄位）──
+    private static readonly (string Col, string Decl)[] 主檔補欄 =
     {
-        ("單據副碼", "INTEGER"),
-        ("建檔序號", "INTEGER"),
-        ("貨單編號", "TEXT"),
-        ("發票編號", "TEXT"),
-        ("發票日期", "TEXT"),
-        ("單據金額", "REAL"),
-        ("單據稅金", "REAL"),
-        ("單據折讓", "REAL"),
-        ("折扣稅額", "REAL"),
-        ("附註", "TEXT"),
+        ("帳款日期", "TEXT"),
+        ("對象簡稱", "TEXT"),
+        ("員編編號", "TEXT"),
+        ("淨計金額", "REAL"),
+        ("稅額合計", "REAL"),
+        ("折扣金額", "REAL"),
+        ("退稅", "REAL"),
     };
 
-    /// <summary>確認折讓明細表具備作業所需欄位（缺欄以 ALTER TABLE 補上；欄位已存在則無操作）。</summary>
+    private static readonly (string Col, string Decl)[] 明細補欄 =
+    {
+        ("單據類別", "TEXT"),
+        ("折讓單號", "TEXT"),
+        ("折讓日期", "TEXT"),
+        ("對象編號", "TEXT"),
+        ("折讓金額", "REAL"),
+        ("折讓稅額", "REAL"),
+        ("折讓貨物", "TEXT"),
+        ("折扣金額", "REAL"),
+        ("備註", "TEXT"),
+    };
+
+    /// <summary>確保折讓主檔與明細表具備作業所需欄位：舊版「折讓類別／員工編號」欄位自動更名，
+    /// 缺欄以 ALTER TABLE 補上；欄位已存在則無操作。</summary>
     public static void EnsureDiscountSchema()
     {
         using var conn = DbManager.OpenConnection();
-        foreach (var (col, decl) in 折讓明細補欄)
-        {
-            var has = ExecScalar(conn,
-                "SELECT COUNT(*) FROM pragma_table_info('折讓明細') WHERE [name] = $c",
-                DbManager.Param("$c", col));
-            if (Convert.ToInt64(has) == 0)
+        Execute(conn, """
+            CREATE TABLE IF NOT EXISTS "折讓主檔" (
+              "單據類別" TEXT, "折讓單號" TEXT, "單據副碼" INTEGER, "折讓日期" TEXT,
+              "帳款日期" TEXT, "對象編號" TEXT, "對象簡稱" TEXT, "部門編號" TEXT,
+              "員編編號" TEXT, "備註" TEXT,
+              "淨計金額" REAL, "稅額合計" REAL, "折讓金額" REAL, "折扣金額" REAL,
+              "總計金額" REAL, "退稅" REAL,
+              PRIMARY KEY ("單據類別"))
+            """);
+        Execute(conn, """
+            CREATE TABLE IF NOT EXISTS "折讓明細" (
+              "單據副碼" INTEGER, "建檔序號" INTEGER, "折讓日期" TEXT,
+              "單據類別" TEXT, "折讓單號" TEXT, "對象編號" TEXT,
+              "貨單編號" TEXT, "發票編號" TEXT, "發票日期" TEXT,
+              "單據金額" REAL, "單據稅金" REAL, "單據折讓" REAL,
+              "折讓金額" REAL, "折讓稅額" REAL, "折讓貨物" TEXT, "折扣金額" REAL,
+              "折扣稅額" REAL, "附註" TEXT, "備註" TEXT,
+              PRIMARY KEY ("單據副碼"))
+            """);
+
+        if (HasColumn(conn, "折讓主檔", "折讓類別") && !HasColumn(conn, "折讓主檔", "單據類別"))
+            Execute(conn, "ALTER TABLE [折讓主檔] RENAME COLUMN [折讓類別] TO [單據類別]");
+        if (HasColumn(conn, "折讓主檔", "員工編號") && !HasColumn(conn, "折讓主檔", "員編編號"))
+            Execute(conn, "ALTER TABLE [折讓主檔] RENAME COLUMN [員工編號] TO [員編編號]");
+
+        foreach (var (col, decl) in 主檔補欄)
+            if (!HasColumn(conn, "折讓主檔", col))
+                Execute(conn, $"ALTER TABLE [折讓主檔] ADD COLUMN [{col}] {decl}");
+        foreach (var (col, decl) in 明細補欄)
+            if (!HasColumn(conn, "折讓明細", col))
                 Execute(conn, $"ALTER TABLE [折讓明細] ADD COLUMN [{col}] {decl}");
-        }
     }
+
+    private static bool HasColumn(SqliteConnection conn, string table, string col) =>
+        Convert.ToInt64(ExecScalar(conn,
+            $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE [name] = $c",
+            DbManager.Param("$c", col))) > 0;
 
     // ── 存檔（新增 / 修改全單重算）──
     public static SaveResult SaveDiscount(SaveDiscountRequest req)

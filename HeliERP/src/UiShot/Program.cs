@@ -79,6 +79,7 @@ var targets = new List<(string Name, Func<Form> Factory)>
     ("06-RepairModuleForm", () => new RepairModuleForm(user)),
     ("06b-InventoryForm", () => new InventoryForm()),
     ("06c-AdjustmentForm", () => new AdjustmentForm()),
+    ("08-DiscountForm", () => new DiscountForm()),
     ("09-TransactionForm", () => new TransactionForm(user)),
     ("10-PaymentForm", () => new PaymentForm()),
     ("11-AccountReceivableForm", () => new AccountReceivableForm()),

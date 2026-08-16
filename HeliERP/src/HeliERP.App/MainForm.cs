@@ -217,10 +217,8 @@ public class MainForm : Form
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var rect = new Rectangle(0, 0, 41, 41);
             using var path = UiTheme.RoundedRect(rect, UiTheme.RadiusMd);
-            using var brush = new LinearGradientBrush(rect, UiTheme.PrimaryLight, UiTheme.PrimaryDark, LinearGradientMode.Vertical);
+            using var brush = new SolidBrush(UiTheme.Accent);
             g.FillPath(brush, path);
-            using var pen = new Pen(UiTheme.Accent, 1.5F);
-            g.DrawPath(pen, path);
             UiTheme.DrawCenteredText(g, "禾", UiTheme.Font(18F, FontStyle.Bold), Color.White, rect);
         };
         var lblBrand = new Label

@@ -56,16 +56,11 @@ public sealed class BillModuleForm : Form
 
     private void BuildToolbar()
     {
-        var bar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = UiTheme.PrimaryDark };
-        bar.Paint += (s, e) =>
-        {
-            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                bar.ClientRectangle, UiTheme.Primary, UiTheme.PrimaryDark, System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-            e.Graphics.FillRectangle(brush, bar.ClientRectangle);
-        };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
         int x = UiTheme.SpacingMd;
         void Add(ModernButton b) { b.Location = new Point(x, 6); b.Height = 40; b.DrawShadow = false; bar.Controls.Add(b); x += b.Width + UiTheme.SpacingSm; }
-        void Sep() { bar.Controls.Add(new Panel { Location = new Point(x, 10), Size = new Size(2, 32), BackColor = Color.FromArgb(70, Color.White) }); x += UiTheme.SpacingSm + 2; }
+        void Sep() { bar.Controls.Add(new Panel { Location = new Point(x, 10), Size = new Size(2, 32), BackColor = UiTheme.Border }); x += UiTheme.SpacingSm + 2; }
 
         var btnSearch = new ModernButton { Text = "搜尋", Width = 110 };
         btnSearch.Click += (s, e) => { LoadList(); _txtKeyword.Focus(); };

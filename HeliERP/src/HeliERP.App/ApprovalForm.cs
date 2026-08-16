@@ -34,7 +34,8 @@ public sealed class ApprovalForm : Form
         Controls.Add(UiTheme.BuildHeader("核准中心", "採購／訂貨／收款／付款等單據多層核准、退回與進度追蹤"));
 
         // ── 工具列 ──
-        var bar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = UiTheme.PrimaryDark };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
         int x = UiTheme.SpacingMd;
         void Add(ModernButton b)
         {

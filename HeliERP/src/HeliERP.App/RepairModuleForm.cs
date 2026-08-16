@@ -115,12 +115,8 @@ public class RepairModuleForm : Form
 
     private void BuildToolbar()
     {
-        var bar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = UiTheme.PrimaryDark };
-        bar.Paint += (s, e) =>
-        {
-            using var brush = new LinearGradientBrush(bar.ClientRectangle, UiTheme.Primary, UiTheme.PrimaryDark, LinearGradientMode.Vertical);
-            e.Graphics.FillRectangle(brush, bar.ClientRectangle);
-        };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
 
         // 按舊系統工具列配置：搜尋 重讀 新增 修改 刪除 列印 | 儲存 復原 | 首筆 上筆 下筆 尾筆 | 說明 離開
         int x = UiTheme.SpacingMd;
@@ -138,7 +134,7 @@ public class RepairModuleForm : Form
             {
                 Location = new Point(x, 10),
                 Size = new Size(2, 32),
-                BackColor = Color.FromArgb(70, Color.White),
+                BackColor = UiTheme.Border,
             });
             x += UiTheme.SpacingSm + 2;
         }

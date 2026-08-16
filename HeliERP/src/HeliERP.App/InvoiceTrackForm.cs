@@ -59,13 +59,8 @@ public sealed class InvoiceTrackForm : Form
 
     private void BuildToolbar()
     {
-        var bar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = UiTheme.PrimaryDark };
-        bar.Paint += (s, e) =>
-        {
-            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                bar.ClientRectangle, UiTheme.Primary, UiTheme.PrimaryDark, System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-            e.Graphics.FillRectangle(brush, bar.ClientRectangle);
-        };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
 
         int x = UiTheme.SpacingMd;
         void Add(ModernButton b)
@@ -198,12 +193,18 @@ public sealed class InvoiceTrackForm : Form
 
     private void BuildStatusBar()
     {
-        var bar = new Panel { Dock = DockStyle.Bottom, Height = 28, BackColor = UiTheme.PrimaryDark };
+        var bar = new Panel { Dock = DockStyle.Bottom, Height = 28 };
+        bar.BackColor = Color.White;
+        bar.Paint += (s, e) =>
+        {
+            using var pen = new Pen(UiTheme.Border);
+            e.Graphics.DrawLine(pen, 0, 0, bar.Width, 0);
+        };
         _lblStatus = new Label
         {
             Text = "狀態: 就緒",
             Font = UiTheme.Font(9.5F),
-            ForeColor = Color.White,
+            ForeColor = UiTheme.TextSub,
             AutoSize = true,
             Location = new Point(UiTheme.SpacingMd, 6),
         };

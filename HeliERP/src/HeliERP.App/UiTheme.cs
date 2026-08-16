@@ -282,6 +282,17 @@ public static class UiTheme
         return panel;
     }
 
+    /// <summary>工具列白底化：替換舊式深藍漸層列，改為白底＋底部細分隔線（極簡風）</summary>
+    public static void StyleTopBar(Panel bar)
+    {
+        bar.BackColor = Color.White;
+        bar.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Border);
+            e.Graphics.DrawLine(pen, 0, bar.Height - 1, bar.Width, bar.Height - 1);
+        };
+    }
+
     // ════════════════════ 控制項樣式 ════════════════════
 
     /// <summary>DataGridView 統一風格：主色列頭、斑馬紋、懸停列高亮、選取列淺藍</summary>

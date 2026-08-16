@@ -91,13 +91,8 @@ public sealed class PaymentForm : Form
 
     private void BuildToolbar()
     {
-        var bar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = UiTheme.PrimaryDark };
-        bar.Paint += (s, e) =>
-        {
-            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                bar.ClientRectangle, UiTheme.Primary, UiTheme.PrimaryDark, System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-            e.Graphics.FillRectangle(brush, bar.ClientRectangle);
-        };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
 
         int x = UiTheme.SpacingMd;
         void Add(ModernButton b)
@@ -114,7 +109,7 @@ public sealed class PaymentForm : Form
             {
                 Location = new Point(x, 10),
                 Size = new Size(2, 32),
-                BackColor = Color.FromArgb(70, Color.White),
+                BackColor = UiTheme.Border,
             });
             x += UiTheme.SpacingSm + 2;
         }

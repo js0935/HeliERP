@@ -28,7 +28,8 @@ public sealed class HealthCheckForm : Form
         Controls.Add(UiTheme.BuildHeader("系統健康檢查",
             "資料庫完整性、WAL 日誌、備份狀態與磁碟空間檢查"));
 
-        var bar = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = UiTheme.PrimaryDark };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
         int x = UiTheme.SpacingMd;
         void Add(ModernButton b)
         {

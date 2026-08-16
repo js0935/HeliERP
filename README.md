@@ -56,6 +56,12 @@ dotnet build src/HeliERP.App/HeliERP.App.csproj -c Release
 dotnet run --project src/HeliERP.App -c Release
 ```
 
+## 介面主題
+
+2026 現代極簡高級灰風格：深炭側邊導覽、極淺灰視窗底（`#F5F5F7`）、單一深藍強調
+（`#2563EB`）、白底工具列與卡片、表格列頭淺灰底深字。登入頁為深炭品牌區＋白底卡片，
+與主程式一致。各模組表單均提供「匯出」（CSV／Excel），含基本資料維護與唯讀檢視。
+
 ## 高解析度 / 縮放支援
 
 - 支援 Windows 顯示縮放（含 200% 高 DPI）。PerMonitorV2 環境下手寫表單不會自動縮放，

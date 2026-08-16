@@ -75,7 +75,8 @@ public class GenericTableForm : Form
             toolbar.Items.Add(new ToolStripButton("儲存", null, (s, e) => SaveChanges()) { DisplayStyle = ToolStripItemDisplayStyle.Text });
             toolbar.Items.Add(new ToolStripSeparator());
         }
-        toolbar.Items.Add(new ToolStripLabel("搜尋："));
+        toolbar.Items.Add(new ToolStripButton("匯出", null, (s, e) => ExportTable()) { DisplayStyle = ToolStripItemDisplayStyle.Text });
+        toolbar.Items.Add(new ToolStripSeparator());
         _txtSearch = new TextBox { Width = 280 };
         _txtSearch.TextChanged += (s, e) => ApplyFilter();
         toolbar.Items.Add(new ToolStripControlHost(_txtSearch));
@@ -140,6 +141,17 @@ public class GenericTableForm : Form
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);
+    }
+
+    /// <summary>匯出目前資料表內容為 CSV / Excel（含唯讀檢視）</summary>
+    private void ExportTable()
+    {
+        if (_dt.Rows.Count == 0)
+        {
+            ShowWarning("目前沒有資料可匯出。", "提示");
+            return;
+        }
+        ExportService.ExportAny(this, _dt, _tableName, $"匯出「{_tableName}」");
     }
 
     private string KeyOf(DataRow row)

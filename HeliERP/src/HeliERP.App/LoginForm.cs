@@ -311,14 +311,12 @@ public class LoginForm : Form
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        // 左側品牌區：深藍漸層（背景層繪製，讓透明 Label 透出漸層）
+        // 左側品牌區：深炭底（背景層繪製，讓透明 Label 透出），與主程式側邊導覽一致
         var w = ClientSize.Width;
         var h = ClientSize.Height;
         var f = DeviceDpi / 96f;
         var lw = (int)Math.Round(340 * f);
-        using (var left = new LinearGradientBrush(
-                   new RectangleF(0, 0, lw, h),
-                   UiTheme.PrimaryDark, UiTheme.PrimaryLight, LinearGradientMode.Vertical))
+        using (var left = new SolidBrush(UiTheme.Sidebar))
         {
             g.FillRectangle(left, 0, 0, lw, h);
         }
@@ -326,10 +324,9 @@ public class LoginForm : Form
         // 右側白底
         g.FillRectangle(Brushes.White, lw, 0, w - lw, h);
 
-        // 金色分隔線與品牌下方裝飾線
+        // 品牌下方裝飾線（單一藍強調）
         using (var accent = new SolidBrush(UiTheme.Accent))
         {
-            g.FillRectangle(accent, (int)Math.Round(337 * f), 0, Math.Max(3, (int)Math.Round(3 * f)), h);
             g.FillRectangle(accent, (int)Math.Round(42 * f), (int)Math.Round(254 * f),
                 (int)Math.Round(60 * f), (int)Math.Round(3 * f));
         }

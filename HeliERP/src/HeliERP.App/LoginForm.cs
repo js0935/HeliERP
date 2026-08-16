@@ -159,10 +159,10 @@ public class LoginForm : Form
         var brandText = string.IsNullOrWhiteSpace(company) ? "HeliERP" : company;
         var brandSub = string.IsNullOrWhiteSpace(company) ? "企業資源規劃系統"
             : company.EndsWith("有限公司") ? "" : "有限公司";
-        _lblBrand = MakeBrandLabel(brandText, UiTheme.Font(20F, FontStyle.Bold), Color.White, new Size(260, 62), new Point(40, 150));
-        _lblBrandSub = MakeBrandLabel(brandSub, UiTheme.Font(12F), Color.FromArgb(200, 255, 255, 255), new Size(260, 26), new Point(40, 212));
-        var lblErp = MakeBrandLabel("企業資源規劃系統 ERP", UiTheme.Font(13F), Color.FromArgb(220, 255, 255, 255), new Size(260, 30), new Point(40, 274));
-        var lblTagline = MakeBrandLabel("安全 ・ 效率 ・ 專業", UiTheme.Font(10.5F), Color.FromArgb(170, 255, 255, 255), new Size(260, 26), new Point(40, 360));
+        _lblBrand = MakeBrandLabel(brandText, UiTheme.Font(20F, FontStyle.Bold), Color.White, new Point(40, 150));
+        _lblBrandSub = MakeBrandLabel(brandSub, UiTheme.Font(12F), Color.FromArgb(200, 255, 255, 255), new Point(40, 212));
+        var lblErp = MakeBrandLabel("企業資源規劃系統", UiTheme.Font(13F), Color.FromArgb(220, 255, 255, 255), new Point(40, 274));
+        var lblTagline = MakeBrandLabel("安全 ・ 效率 ・ 專業", UiTheme.Font(10.5F), Color.FromArgb(170, 255, 255, 255), new Point(40, 360));
 
         Controls.AddRange(new Control[] { lblWelcome, lblHint, lblUser, lblPass, _txtUserId, _txtPassword, lblDb, _cmbDatabase, _btnBrowse, _lblMessage, _btnLogin, _btnCancel, lblCredit1, lblCredit2, _lblBrand, _lblBrandSub, lblErp, lblTagline });
         AcceptButton = _btnLogin;
@@ -172,17 +172,15 @@ public class LoginForm : Form
         UiTheme.ClampToScreen(this);
     }
 
-    /// <summary>建立左側品牌區文字標籤（透明背景以透出漸層）</summary>
-    private static Label MakeBrandLabel(string text, Font font, Color color, Size size, Point location) => new()
+    /// <summary>建立左側品牌區文字標籤（AutoSize 使高度自動吻合字體，透明背景透出漸層）</summary>
+    private static Label MakeBrandLabel(string text, Font font, Color color, Point location) => new()
     {
         Text = text,
         Font = font,
         ForeColor = color,
         BackColor = Color.Transparent,
-        AutoSize = false,
-        Size = size,
+        AutoSize = true,
         Location = location,
-        TextAlign = ContentAlignment.MiddleLeft,
         Padding = new Padding(0),
         Margin = new Padding(0),
     };

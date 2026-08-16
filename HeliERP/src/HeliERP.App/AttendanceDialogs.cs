@@ -109,6 +109,7 @@ public static class AttendanceDialogs
         };
         btnCancel.Click += (s, e) => dlg.Close();
 
+        UiTheme.ClampToScreen(dlg);
         return dlg.ShowDialog(owner) == DialogResult.OK ? result : null;
     }
 
@@ -243,6 +244,7 @@ public static class AttendanceDialogs
         };
         btnCancel.Click += (s, e) => dlg.Close();
 
+        UiTheme.ClampToScreen(dlg);
         return dlg.ShowDialog(owner) == DialogResult.OK ? result : null;
     }
 

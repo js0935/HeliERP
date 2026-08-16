@@ -144,6 +144,7 @@ public sealed class ApprovalForm : Form
             }
         };
         ShortcutHelper.Enable(this, onSearch: () => _txtKeyword.Focus(), onDelete: () => { }, onAdd: () => ShowSettings());
+        UiTheme.ClampToScreen(this);
     }
 
     private void LoadFlows()
@@ -274,6 +275,7 @@ public sealed class ApprovalForm : Form
         dlg.Controls.Add(btnSave);
         dlg.Controls.Add(btnCancel);
 
+        UiTheme.ClampToScreen(dlg);
         dlg.ShowDialog(this);
     }
 

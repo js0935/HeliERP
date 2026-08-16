@@ -73,6 +73,80 @@ public static class UiTheme
     }
 
     /// <summary>
+    /// 高 DPI（如 200% 縮放）下確保表單不超出螢幕工作區：
+    /// 一般表單在 Load 後若尺寸超過工作區，將整張表單收斂縮放並重新置中；
+    /// 最大化表單則量測內容需求（上/下/左/右停靠與固定控制），超出時收斂縮放子控制。
+    /// 於表單建構尾呼叫（AutoScale 前）。
+    /// </summary>
+    public static void ClampToScreen(Form form)
+    {
+        form.Load += (s, e) =>
+        {
+            try
+            {
+                var wa = Screen.FromControl(form).WorkingArea;
+
+                if (form.WindowState == FormWindowState.Maximized)
+                {
+                    int topH = 0, bottomH = 0, leftW = 0, rightW = 0;
+                    int needW = 0, needH = 0;
+                    foreach (Control c in form.Controls)
+                    {
+                        switch (c.Dock)
+                        {
+                            case DockStyle.Top:
+                                topH += c.Height;
+                                needW = Math.Max(needW, c.PreferredSize.Width);
+                                break;
+                            case DockStyle.Bottom:
+                                bottomH += c.Height;
+                                needW = Math.Max(needW, c.PreferredSize.Width);
+                                break;
+                            case DockStyle.Left:
+                                leftW += c.Width;
+                                needH = Math.Max(needH, c.PreferredSize.Height);
+                                break;
+                            case DockStyle.Right:
+                                rightW += c.Width;
+                                needH = Math.Max(needH, c.PreferredSize.Height);
+                                break;
+                            default:
+                                needW = Math.Max(needW, c.Right);
+                                needH = Math.Max(needH, c.Bottom);
+                                break;
+                        }
+                    }
+                    int cw = form.ClientSize.Width, ch = form.ClientSize.Height;
+                    needW = Math.Max(needW, leftW + rightW);
+                    needH = Math.Max(needH, topH + bottomH + 120);
+                    float k = Math.Min(cw / (float)Math.Max(1, needW), ch / (float)Math.Max(1, needH));
+                    if (k >= 1f - 0.01f) return;
+                    form.SuspendLayout();
+                    foreach (Control c in form.Controls)
+                        c.Scale(new SizeF(k, k));
+                    form.ResumeLayout(true);
+                }
+                else
+                {
+                    if (form.Width <= wa.Width && form.Height <= wa.Height) return;
+                    float k = Math.Min(wa.Width / (float)form.Width, wa.Height / (float)form.Height);
+                    form.SuspendLayout();
+                    form.Scale(new SizeF(k, k));
+                    form.ResumeLayout(true);
+                    if (form.StartPosition == FormStartPosition.CenterScreen)
+                        form.Location = new Point(
+                            wa.X + (wa.Width - form.Width) / 2,
+                            wa.Y + (wa.Height - form.Height) / 2);
+                }
+            }
+            catch
+            {
+                // 縮放失敗時維持原樣，不影響啟動
+            }
+        };
+    }
+
+    /// <summary>
     /// 統一的表單標題列：標題 + 副標題 + 金色短線。
     /// 回傳 Top-Dock Panel，各表單於建構時第一個加入（置於工具列上方）。
     /// </summary>

@@ -66,6 +66,7 @@ public sealed class HealthCheckForm : Form
         Controls.Add(_lblStatus);
 
         Load += (s, e) => RunChecks();
+        UiTheme.ClampToScreen(this);
     }
 
     private void RunChecks()

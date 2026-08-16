@@ -49,6 +49,7 @@ public sealed class BillModuleForm : Form
         LoadList();
 
         ShortcutHelper.Enable(this, () => EditBill(null), () => EditBill(GetSelectedRow()), DeleteSelected, LoadList);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== UI ====================

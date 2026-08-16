@@ -74,6 +74,7 @@ public sealed class PayrollModuleForm : Form
                 if (_tabs.SelectedIndex == 1) LoadConfig();
                 else LoadAttendance();
             });
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 出缺勤 ====================

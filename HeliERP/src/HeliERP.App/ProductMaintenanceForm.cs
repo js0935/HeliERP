@@ -112,6 +112,7 @@ public class ProductMaintenanceForm : Form
         UpdateCount();
 
         ShortcutHelper.Enable(this, onDelete: DeleteRows, onSearch: () => _txtSearch.Focus());
+        UiTheme.ClampToScreen(this);
     }
 
     private string KeyOf(DataRow row)

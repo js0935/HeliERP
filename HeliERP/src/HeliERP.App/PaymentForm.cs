@@ -84,6 +84,7 @@ public sealed class PaymentForm : Form
         };
 
         ShortcutHelper.Enable(this, NewPayment, null, DeletePayment, LoadList);
+        UiTheme.ClampToScreen(this);
     }
 
     private void BuildToolbar()

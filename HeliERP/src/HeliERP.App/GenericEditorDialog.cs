@@ -121,6 +121,7 @@ public sealed class GenericEditorDialog : Form
         CancelButton = btnCancel;
 
         ClientSize = new Size(w, Math.Min(y + 72, 720));
+        UiTheme.ClampToScreen(this);
     }
 
     /// <summary>顯示新增/編輯對話框，確定後值已寫入資料列。回傳是否按確定。</summary>

@@ -69,6 +69,7 @@ public sealed class ProductionModuleForm : Form
                 if (_tabs.SelectedIndex == 1) LoadShipping();
                 else LoadInspection();
             });
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 驗貨 ====================

@@ -121,6 +121,7 @@ public sealed class GlobalSearchForm : Form
         };
 
         Shown += (s, e) => _txtSearch.Focus();
+        UiTheme.ClampToScreen(this);
     }
 
     private void RunSearch()

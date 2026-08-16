@@ -95,6 +95,7 @@ public class MainForm : Form
             }
             catch { /* 檢查失敗不阻擋啟動 */ }
         };
+        UiTheme.ClampToScreen(this);
     }
 
     private void BuildMenu()

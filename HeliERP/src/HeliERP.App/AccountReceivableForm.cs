@@ -61,6 +61,7 @@ public sealed class AccountReceivableForm : Form
         };
 
         ShortcutHelper.Enable(this, onSearch: LoadSummary);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 版面建構 ====================
@@ -498,6 +499,7 @@ public sealed class AccountReceivableForm : Form
         bottom.Controls.Add(btnOk);
         bottom.Controls.Add(btnCancel);
         dlg.Controls.Add(bottom);
+        UiTheme.ClampToScreen(dlg);
 
         if (dlg.ShowDialog(this) == DialogResult.OK)
         {

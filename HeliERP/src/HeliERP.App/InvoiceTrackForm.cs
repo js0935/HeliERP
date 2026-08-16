@@ -50,6 +50,7 @@ public sealed class InvoiceTrackForm : Form
             }
         };
         ShortcutHelper.Enable(this, onSearch: LoadLog);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 版面 ====================
@@ -324,6 +325,7 @@ public sealed class InvoiceTrackForm : Form
         dlg.AcceptButton = btnOk;
         dlg.CancelButton = btnCancel;
         dlg.Controls.AddRange(new Control[] { txtYear, txtMonth, txtTrack, txtStart, txtEnd, chkAuto, lblMsg, btnOk, btnCancel });
+        UiTheme.ClampToScreen(dlg);
 
         if (dlg.ShowDialog(this) == DialogResult.OK)
         {

@@ -85,6 +85,7 @@ public class TableBrowserForm : Form
             _tree.SelectedNode = _tree.SelectedNode.Nodes[0];
 
         ShortcutHelper.Enable(this, onSearch: () => _txtSearch.Focus());
+        UiTheme.ClampToScreen(this);
     }
 
     /// <summary>建立分類樹（不含 Hidden 表）</summary>

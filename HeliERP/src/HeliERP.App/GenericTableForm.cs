@@ -139,6 +139,7 @@ public class GenericTableForm : Form
             _txtSearch.Text = initialFilter;
 
         ShortcutHelper.Enable(this, onDelete: _canEdit ? DeleteRows : null, onSearch: () => _txtSearch.Focus());
+        UiTheme.ClampToScreen(this);
     }
 
     private string KeyOf(DataRow row)

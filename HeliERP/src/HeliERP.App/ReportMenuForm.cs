@@ -216,6 +216,7 @@ public sealed class ReportMenuForm : Form
 
         root.Controls.Add(flow);
         Controls.Add(root);
+        UiTheme.ClampToScreen(this);
     }
 
     private static void AddSection(FlowLayoutPanel flow, string title)
@@ -470,6 +471,7 @@ public sealed class ReportMenuForm : Form
         dlg.Controls.Add(cancel);
         dlg.AcceptButton = ok;
         dlg.CancelButton = cancel;
+        UiTheme.ClampToScreen(dlg);
 
         if (dlg.ShowDialog(this) != DialogResult.OK || combo.SelectedIndex < 0)
             return null;

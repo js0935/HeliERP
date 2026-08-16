@@ -76,6 +76,7 @@ public sealed class PoOrderForm : Form
                 _lblStatus.Text = "狀態: 載入失敗 - " + ex.Message;
             }
         };
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 版面建構 ====================

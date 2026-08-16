@@ -95,6 +95,7 @@ public class ConfigForm : Form
         btnRow.Controls.AddRange(new Control[] { _btnTest, _btnOk, _btnCancel, _lblStatus });
 
         Controls.AddRange(new Control[] { cardDb, cardCompany, btnRow });
+        UiTheme.ClampToScreen(this);
     }
 
     private string CompanyText()

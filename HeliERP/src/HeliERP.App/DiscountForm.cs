@@ -69,6 +69,7 @@ public sealed class DiscountForm : Form
         };
 
         ShortcutHelper.Enable(this, onDelete: DeleteSelected, onSearch: LoadList);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 版面建構 ====================

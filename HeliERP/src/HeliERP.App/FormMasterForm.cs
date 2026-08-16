@@ -105,6 +105,7 @@ public sealed class FormMasterForm : Form
         BuildUi(pagesFinal);
         ReloadList();
         UpdateStatus();
+        UiTheme.ClampToScreen(this);
     }
 
     // ══════════════════════════ 資料載入 ══════════════════════════

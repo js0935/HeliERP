@@ -85,6 +85,7 @@ public sealed class InventoryForm : Form
         };
 
         ShortcutHelper.Enable(this, onSearch: LoadStock);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 版面建構 ====================

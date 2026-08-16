@@ -97,6 +97,7 @@ public sealed class AuditLogForm : Form
         _dtpTo.Value = DateTime.Now;
         ShortcutHelper.Enable(this, onSearch: LoadLog);
         Load += (s, e) => LoadLog();
+        UiTheme.ClampToScreen(this);
     }
 
     private Label MakeFieldLabel(string text, int x, int top)

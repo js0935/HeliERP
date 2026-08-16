@@ -108,6 +108,7 @@ public class RepairModuleForm : Form
             },
             DeleteBill,
             LoadList);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== UI 建立 ====================

@@ -79,6 +79,7 @@ public sealed class AccountingModuleForm : Form
                 else if (_tabs.SelectedIndex == 2) LoadJournals();
                 else LoadVouchers();
             });
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== 傳票作業 ====================

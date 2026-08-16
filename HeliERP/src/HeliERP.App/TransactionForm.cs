@@ -83,6 +83,7 @@ public class TransactionForm : Form
         LoadList();
 
         ShortcutHelper.Enable(this, NewBill, EditBill, DeleteBill, LoadList);
+        UiTheme.ClampToScreen(this);
     }
 
     // ==================== UI 建立 ====================

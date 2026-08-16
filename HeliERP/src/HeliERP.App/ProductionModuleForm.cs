@@ -18,15 +18,16 @@ public sealed class ProductionModuleForm : Form
 {
     // 驗貨
     private readonly DataGridView _gridInsp = new(), _gridInspDetail = new();
-    private readonly Label _lblInsp = new();
     private long _inspKey = -1;
+    private int _inspCount;
 
     // 託運
     private readonly DataGridView _gridShip = new(), _gridShipDetail = new();
-    private readonly Label _lblShip = new();
     private long _shipKey = -1;
+    private int _shipCount;
 
     private readonly TabControl _tabs = new();
+    private Label _lblStatus = null!;
 
     public ProductionModuleForm()
     {
@@ -37,39 +38,126 @@ public sealed class ProductionModuleForm : Form
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("生管系統", "驗貨（品檢）與託運（出貨運輸）單據作業"));
 
+        BuildGlobalToolbar();
+        BuildStatusBar();
+
         _tabs.Dock = DockStyle.Fill;
         _tabs.Font = UiTheme.Font(10.5F);
         _tabs.Controls.Add(BuildInspectionTab());
         _tabs.Controls.Add(BuildShippingTab());
+        _tabs.SelectedIndexChanged += (s, e) => UpdateStatusBar();
         Controls.Add(_tabs);
 
-        LoadInspection();
-        LoadShipping();
+        Load += (s, e) =>
+        {
+            LoadInspection();
+            LoadShipping();
+            UpdateStatusBar();
+        };
 
-        ShortcutHelper.Enable(this,
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) EditShipping(null);
-                else EditInspection(null);
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) EditShipping(ShipRow());
-                else EditInspection(InspRow());
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) DeleteShipping();
-                else DeleteInspection();
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) LoadShipping();
-                else LoadInspection();
-            });
+        ShortcutHelper.Enable(this, AddCurrent, EditCurrent, DeleteCurrent, ReloadCurrent, ReloadCurrent);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);
+    }
+
+    // ==================== 全域工具列 ====================
+
+    private void BuildGlobalToolbar()
+    {
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
+
+        int x = UiTheme.SpacingMd;
+        void Add(ModernButton b)
+        {
+            b.Location = new Point(x, 6);
+            b.Height = 40;
+            b.DrawShadow = false;
+            bar.Controls.Add(b);
+            x += b.Width + UiTheme.SpacingSm;
+        }
+        void Sep()
+        {
+            bar.Controls.Add(new Panel
+            {
+                Location = new Point(x, 10),
+                Size = new Size(2, 32),
+                BackColor = UiTheme.Border,
+            });
+            x += UiTheme.SpacingSm + 2;
+        }
+
+        var btnSearch = new ModernButton { Text = "搜尋", Width = 120 };
+        btnSearch.Click += (s, e) => ReloadCurrent();
+        var btnReload = new ModernButton { Text = "重讀", Width = 120, IsPrimary = false };
+        btnReload.Click += (s, e) => ReloadCurrent();
+        var btnNew = new ModernButton { Text = "新增", Width = 120 };
+        btnNew.Click += (s, e) => AddCurrent();
+        var btnEdit = new ModernButton { Text = "修改", Width = 120, IsPrimary = false };
+        btnEdit.Click += (s, e) => EditCurrent();
+        var btnDel = new ModernButton { Text = "刪除", Width = 120, IsPrimary = false };
+        btnDel.Click += (s, e) => DeleteCurrent();
+
+        Add(btnSearch); Add(btnReload); Add(btnNew); Add(btnEdit); Add(btnDel);
+        Sep();
+
+        var btnHelp = new ModernButton { Text = "說明", Width = 120, IsPrimary = false };
+        btnHelp.Click += (s, e) =>
+            MessageBox.Show("生管系統 v1.0\n驗貨作業：驗貨單主檔＋驗貨明細（品檢結果記錄）。\n託運作業：託運單主檔＋託運明細（出貨運輸，自動計算金額與稅額）。",
+                "說明", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var btnExit = new ModernButton { Text = "離開", Width = 120, IsPrimary = false };
+        btnExit.Click += (s, e) => Close();
+
+        Add(btnHelp); Add(btnExit);
+
+        Controls.Add(bar);
+    }
+
+    private void BuildStatusBar()
+    {
+        var bar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = UiTheme.BorderLight };
+        _lblStatus = new Label
+        {
+            Text = "狀態: 就緒",
+            AutoSize = true,
+            Location = new Point(12, 5),
+            ForeColor = UiTheme.TextSub,
+            Font = UiTheme.Font(10.5F, FontStyle.Bold),
+        };
+        bar.Controls.Add(_lblStatus);
+        Controls.Add(bar);
+    }
+
+    private void UpdateStatusBar()
+    {
+        _lblStatus.Text = _tabs.SelectedIndex == 1
+            ? $"託運作業：共 {_shipCount} 單"
+            : $"驗貨作業：共 {_inspCount} 單";
+    }
+
+    private void AddCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) EditShipping(null);
+        else EditInspection(null);
+    }
+
+    private void EditCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) EditShipping(ShipRow());
+        else EditInspection(InspRow());
+    }
+
+    private void DeleteCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) DeleteShipping();
+        else DeleteInspection();
+    }
+
+    private void ReloadCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) LoadShipping();
+        else LoadInspection();
     }
 
     // ==================== 驗貨 ====================
@@ -80,15 +168,7 @@ public sealed class ProductionModuleForm : Form
         var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 300 };
 
         var top = new Panel { Dock = DockStyle.Fill };
-        var topBar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditInspection(null)),
-            ("修改", () => EditInspection(InspRow())),
-            ("刪除", () => DeleteInspection()),
-            ("重新整理", () => LoadInspection()),
-        }, _lblInsp);
-        top.Controls.Add(topBar);
         top.Controls.Add(_gridInsp);
-        topBar.Dock = DockStyle.Top;
         _gridInsp.Dock = DockStyle.Fill;
         UiTheme.StyleDataGridView(_gridInsp);
         _gridInsp.ReadOnly = true;
@@ -103,7 +183,7 @@ public sealed class ProductionModuleForm : Form
             ("新增明細", () => EditInspectionDetail(null)),
             ("修改明細", () => EditInspectionDetail(InspDetailRow())),
             ("刪除明細", () => DeleteInspectionDetail()),
-        }, null);
+        });
         bottom.Controls.Add(bottomBar);
         bottom.Controls.Add(_gridInspDetail);
         bottomBar.Dock = DockStyle.Top;
@@ -121,7 +201,7 @@ public sealed class ProductionModuleForm : Form
         return page;
     }
 
-    private Panel BuildBar((string Text, Action Action)[] buttons, Label? status)
+    private Panel BuildBar((string Text, Action Action)[] buttons)
     {
         var bar = new Panel { Height = 46, BackColor = UiTheme.Background, Padding = new Padding(10, 6, 10, 6) };
         int x = 12;
@@ -132,14 +212,6 @@ public sealed class ProductionModuleForm : Form
             x += b.Width + 8;
             b.Click += (s, e) => action();
             bar.Controls.Add(b);
-        }
-        if (status is not null)
-        {
-            status.AutoSize = true;
-            status.Font = UiTheme.Font(9.5F);
-            status.ForeColor = UiTheme.TextSub;
-            status.Location = new Point(x + 8, 14);
-            bar.Controls.Add(status);
         }
         return bar;
     }
@@ -164,7 +236,8 @@ public sealed class ProductionModuleForm : Form
             "FROM [驗貨主檔] ORDER BY [驗貨日期] DESC, [驗貨單號]");
         _gridInsp.DataSource = dt;
         _gridInsp.Columns["__key"].Visible = false;
-        _lblInsp.Text = $"共 {dt.Rows.Count} 單";
+        _inspCount = dt.Rows.Count;
+        UpdateStatusBar();
         if (dt.Rows.Count > 0)
         {
             _gridInsp.Rows[0].Selected = true;
@@ -314,15 +387,7 @@ public sealed class ProductionModuleForm : Form
         var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 300 };
 
         var top = new Panel { Dock = DockStyle.Fill };
-        var topBar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditShipping(null)),
-            ("修改", () => EditShipping(ShipRow())),
-            ("刪除", () => DeleteShipping()),
-            ("重新整理", () => LoadShipping()),
-        }, _lblShip);
-        top.Controls.Add(topBar);
         top.Controls.Add(_gridShip);
-        topBar.Dock = DockStyle.Top;
         _gridShip.Dock = DockStyle.Fill;
         UiTheme.StyleDataGridView(_gridShip);
         _gridShip.ReadOnly = true;
@@ -337,7 +402,7 @@ public sealed class ProductionModuleForm : Form
             ("新增明細", () => EditShippingDetail(null)),
             ("修改明細", () => EditShippingDetail(ShipDetailRow())),
             ("刪除明細", () => DeleteShippingDetail()),
-        }, null);
+        });
         bottom.Controls.Add(bottomBar);
         bottom.Controls.Add(_gridShipDetail);
         bottomBar.Dock = DockStyle.Top;
@@ -375,7 +440,8 @@ public sealed class ProductionModuleForm : Form
             "FROM [託運主檔] ORDER BY [託運日期] DESC, [託運單號]");
         _gridShip.DataSource = dt;
         _gridShip.Columns["__key"].Visible = false;
-        _lblShip.Text = $"共 {dt.Rows.Count} 單";
+        _shipCount = dt.Rows.Count;
+        UpdateStatusBar();
         if (dt.Rows.Count > 0)
         {
             _gridShip.Rows[0].Selected = true;

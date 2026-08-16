@@ -17,20 +17,21 @@ public sealed class AccountingModuleForm : Form
 {
     // 傳票
     private readonly DataGridView _gridVoucher = new(), _gridVoucherDetail = new();
-    private readonly Label _lblVoucher = new();
     private long _voucherKey = -1;
     private string _voucherNo = "", _voucherKind = "";
+    private int _voucherCount;
 
     // 會計科目
     private readonly DataGridView _gridTitle = new();
-    private readonly Label _lblTitle = new();
+    private int _titleCount;
 
     // 常用分錄
     private readonly DataGridView _gridJournal = new(), _gridJournalDetail = new();
-    private readonly Label _lblJournal = new();
     private string _journalNo = "";
+    private int _journalCount;
 
     private readonly TabControl _tabs = new();
+    private Label _lblStatus = null!;
 
     public AccountingModuleForm()
     {
@@ -41,45 +42,135 @@ public sealed class AccountingModuleForm : Form
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("會計系統", "會計傳票登錄、會計科目維護與常用分錄管理"));
 
+        BuildGlobalToolbar();
+        BuildStatusBar();
+
         _tabs.Dock = DockStyle.Fill;
         _tabs.Font = UiTheme.Font(10.5F);
         _tabs.Controls.Add(BuildVoucherTab());
         _tabs.Controls.Add(BuildTitleTab());
         _tabs.Controls.Add(BuildJournalTab());
+        _tabs.SelectedIndexChanged += (s, e) => UpdateStatusBar();
         Controls.Add(_tabs);
 
-        LoadVouchers();
-        LoadTitles();
-        LoadJournals();
+        Load += (s, e) =>
+        {
+            LoadVouchers();
+            LoadTitles();
+            LoadJournals();
+            UpdateStatusBar();
+        };
 
-        ShortcutHelper.Enable(this,
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) EditTitle(null);
-                else if (_tabs.SelectedIndex == 2) EditJournal(null);
-                else EditVoucher(null);
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) EditTitle(TitleRow());
-                else if (_tabs.SelectedIndex == 2) EditJournal(JournalRow());
-                else EditVoucher(VoucherRow());
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) DeleteTitle();
-                else if (_tabs.SelectedIndex == 2) DeleteJournal();
-                else DeleteVoucher();
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) LoadTitles();
-                else if (_tabs.SelectedIndex == 2) LoadJournals();
-                else LoadVouchers();
-            });
+        ShortcutHelper.Enable(this, AddCurrent, EditCurrent, DeleteCurrent, ReloadCurrent, ReloadCurrent);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);
+    }
+
+    // ==================== 全域工具列 ====================
+
+    private void BuildGlobalToolbar()
+    {
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
+
+        int x = UiTheme.SpacingMd;
+        void Add(ModernButton b)
+        {
+            b.Location = new Point(x, 6);
+            b.Height = 40;
+            b.DrawShadow = false;
+            bar.Controls.Add(b);
+            x += b.Width + UiTheme.SpacingSm;
+        }
+        void Sep()
+        {
+            bar.Controls.Add(new Panel
+            {
+                Location = new Point(x, 10),
+                Size = new Size(2, 32),
+                BackColor = UiTheme.Border,
+            });
+            x += UiTheme.SpacingSm + 2;
+        }
+
+        var btnSearch = new ModernButton { Text = "搜尋", Width = 120 };
+        btnSearch.Click += (s, e) => ReloadCurrent();
+        var btnReload = new ModernButton { Text = "重讀", Width = 120, IsPrimary = false };
+        btnReload.Click += (s, e) => ReloadCurrent();
+        var btnNew = new ModernButton { Text = "新增", Width = 120 };
+        btnNew.Click += (s, e) => AddCurrent();
+        var btnEdit = new ModernButton { Text = "修改", Width = 120, IsPrimary = false };
+        btnEdit.Click += (s, e) => EditCurrent();
+        var btnDel = new ModernButton { Text = "刪除", Width = 120, IsPrimary = false };
+        btnDel.Click += (s, e) => DeleteCurrent();
+
+        Add(btnSearch); Add(btnReload); Add(btnNew); Add(btnEdit); Add(btnDel);
+        Sep();
+
+        var btnHelp = new ModernButton { Text = "說明", Width = 120, IsPrimary = false };
+        btnHelp.Click += (s, e) =>
+            MessageBox.Show("會計系統 v1.0\n傳票作業：傳票主檔＋傳票明細（借貸科目與金額，自動加總借貸方）。\n會計科目：科目編號／名稱／期初餘額維護。\n常用分錄：常用借貸分錄組與明細維護。",
+                "說明", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var btnExit = new ModernButton { Text = "離開", Width = 120, IsPrimary = false };
+        btnExit.Click += (s, e) => Close();
+
+        Add(btnHelp); Add(btnExit);
+
+        Controls.Add(bar);
+    }
+
+    private void BuildStatusBar()
+    {
+        var bar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = UiTheme.BorderLight };
+        _lblStatus = new Label
+        {
+            Text = "狀態: 就緒",
+            AutoSize = true,
+            Location = new Point(12, 5),
+            ForeColor = UiTheme.TextSub,
+            Font = UiTheme.Font(10.5F, FontStyle.Bold),
+        };
+        bar.Controls.Add(_lblStatus);
+        Controls.Add(bar);
+    }
+
+    private void UpdateStatusBar()
+    {
+        _lblStatus.Text = _tabs.SelectedIndex switch
+        {
+            1 => $"會計科目：共 {_titleCount} 個科目",
+            2 => $"常用分錄：共 {_journalCount} 組常用分錄",
+            _ => $"傳票作業：共 {_voucherCount} 張傳票",
+        };
+    }
+
+    private void AddCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) EditTitle(null);
+        else if (_tabs.SelectedIndex == 2) EditJournal(null);
+        else EditVoucher(null);
+    }
+
+    private void EditCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) EditTitle(TitleRow());
+        else if (_tabs.SelectedIndex == 2) EditJournal(JournalRow());
+        else EditVoucher(VoucherRow());
+    }
+
+    private void DeleteCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) DeleteTitle();
+        else if (_tabs.SelectedIndex == 2) DeleteJournal();
+        else DeleteVoucher();
+    }
+
+    private void ReloadCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) LoadTitles();
+        else if (_tabs.SelectedIndex == 2) LoadJournals();
+        else LoadVouchers();
     }
 
     // ==================== 傳票作業 ====================
@@ -90,15 +181,7 @@ public sealed class AccountingModuleForm : Form
         var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 260 };
 
         var top = new Panel { Dock = DockStyle.Fill };
-        var topBar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditVoucher(null)),
-            ("修改", () => EditVoucher(VoucherRow())),
-            ("刪除", () => DeleteVoucher()),
-            ("重新整理", () => LoadVouchers()),
-        }, _lblVoucher);
-        top.Controls.Add(topBar);
         top.Controls.Add(_gridVoucher);
-        topBar.Dock = DockStyle.Top;
         _gridVoucher.Dock = DockStyle.Fill;
         StyleGrid(_gridVoucher);
         _gridVoucher.SelectionChanged += (s, e) => LoadVoucherDetail();
@@ -108,7 +191,7 @@ public sealed class AccountingModuleForm : Form
             ("新增明細", () => EditVoucherDetail(null)),
             ("修改明細", () => EditVoucherDetail(VoucherDetailRow())),
             ("刪除明細", () => DeleteVoucherDetail()),
-        }, null);
+        });
         bottom.Controls.Add(bottomBar);
         bottom.Controls.Add(_gridVoucherDetail);
         bottomBar.Dock = DockStyle.Top;
@@ -141,7 +224,8 @@ public sealed class AccountingModuleForm : Form
         _gridVoucher.DataSource = dt;
         if (_gridVoucher.Columns.Contains("__key"))
             _gridVoucher.Columns["__key"].Visible = false;
-        _lblVoucher.Text = $"共 {dt.Rows.Count} 張傳票";
+        _voucherCount = dt.Rows.Count;
+        UpdateStatusBar();
         if (dt.Rows.Count > 0)
         {
             _gridVoucher.Rows[0].Selected = true;
@@ -322,14 +406,6 @@ public sealed class AccountingModuleForm : Form
     private TabPage BuildTitleTab()
     {
         var page = new TabPage("會計科目") { BackColor = UiTheme.Background };
-        var bar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditTitle(null)),
-            ("修改", () => EditTitle(TitleRow())),
-            ("刪除", () => DeleteTitle()),
-            ("重新整理", () => LoadTitles()),
-        }, _lblTitle);
-        bar.Dock = DockStyle.Top;
-        page.Controls.Add(bar);
         page.Controls.Add(_gridTitle);
         _gridTitle.Dock = DockStyle.Fill;
         StyleGrid(_gridTitle);
@@ -348,7 +424,8 @@ public sealed class AccountingModuleForm : Form
             "SELECT [科目編號], [科目名稱], [英文名稱], [常用摘要], [類別編號], [期初借貸], [期初餘額], [沖銷科目], [統制科目], [隸屬科目], [說明] " +
             "FROM [會計科目] ORDER BY [科目編號]");
         _gridTitle.DataSource = dt;
-        _lblTitle.Text = $"共 {dt.Rows.Count} 個科目";
+        _titleCount = dt.Rows.Count;
+        UpdateStatusBar();
     }
 
     private void EditTitle(DataRow? row)
@@ -409,15 +486,7 @@ public sealed class AccountingModuleForm : Form
         var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 240 };
 
         var top = new Panel { Dock = DockStyle.Fill };
-        var topBar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditJournal(null)),
-            ("修改", () => EditJournal(JournalRow())),
-            ("刪除", () => DeleteJournal()),
-            ("重新整理", () => LoadJournals()),
-        }, _lblJournal);
-        top.Controls.Add(topBar);
         top.Controls.Add(_gridJournal);
-        topBar.Dock = DockStyle.Top;
         _gridJournal.Dock = DockStyle.Fill;
         StyleGrid(_gridJournal);
         _gridJournal.SelectionChanged += (s, e) => LoadJournalDetail();
@@ -427,7 +496,7 @@ public sealed class AccountingModuleForm : Form
             ("新增明細", () => EditJournalDetail(null)),
             ("修改明細", () => EditJournalDetail(JournalDetailRow())),
             ("刪除明細", () => DeleteJournalDetail()),
-        }, null);
+        });
         bottom.Controls.Add(bottomBar);
         bottom.Controls.Add(_gridJournalDetail);
         bottomBar.Dock = DockStyle.Top;
@@ -457,7 +526,8 @@ public sealed class AccountingModuleForm : Form
         var dt = DbManager.QueryTable(
             "SELECT [分錄編號], [分錄類別], [分錄名稱] FROM [常用分錄] ORDER BY [分錄編號]");
         _gridJournal.DataSource = dt;
-        _lblJournal.Text = $"共 {dt.Rows.Count} 組常用分錄";
+        _journalCount = dt.Rows.Count;
+        UpdateStatusBar();
         if (dt.Rows.Count > 0)
         {
             _gridJournal.Rows[0].Selected = true;
@@ -591,7 +661,7 @@ public sealed class AccountingModuleForm : Form
             $"SELECT COALESCE(MAX([建檔序號]),0)+1 FROM [{table}] WHERE [單據副碼]=$k",
             DbManager.Param("$k", key)) ?? 1L);
 
-    private Panel BuildBar((string Text, Action Action)[] buttons, Label? status)
+    private Panel BuildBar((string Text, Action Action)[] buttons)
     {
         var bar = new Panel { Height = 46, BackColor = UiTheme.Background, Padding = new Padding(10, 6, 10, 6) };
         int x = 12;
@@ -602,14 +672,6 @@ public sealed class AccountingModuleForm : Form
             x += b.Width + 8;
             b.Click += (s, e) => action();
             bar.Controls.Add(b);
-        }
-        if (status is not null)
-        {
-            status.AutoSize = true;
-            status.Font = UiTheme.Font(9.5F);
-            status.ForeColor = UiTheme.TextSub;
-            status.Location = new Point(x + 8, 14);
-            bar.Controls.Add(status);
         }
         return bar;
     }

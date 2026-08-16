@@ -71,7 +71,21 @@ public sealed class InvoiceTrackForm : Form
             bar.Controls.Add(b);
             x += b.Width + UiTheme.SpacingSm;
         }
+        void Sep()
+        {
+            bar.Controls.Add(new Panel
+            {
+                Location = new Point(x, 10),
+                Size = new Size(2, 32),
+                BackColor = UiTheme.Border,
+            });
+            x += UiTheme.SpacingSm + 2;
+        }
 
+        var btnSearch = new ModernButton { Text = "搜尋", Width = 120 };
+        btnSearch.Click += (s, e) => LoadTracks();
+        var btnReload = new ModernButton { Text = "重讀", Width = 120, IsPrimary = false };
+        btnReload.Click += (s, e) => LoadTracks();
         var btnAdd = new ModernButton { Text = "新增字軌", Width = 120 };
         btnAdd.Click += (s, e) => ShowTrackEditor(null);
         var btnEdit = new ModernButton { Text = "修改字軌", Width = 120, IsPrimary = false };
@@ -82,10 +96,18 @@ public sealed class InvoiceTrackForm : Form
         btnDelete.Click += (s, e) => DeleteTrack();
         var btnExport = new ModernButton { Text = "匯出字軌", Width = 120, IsPrimary = false };
         btnExport.Click += (s, e) => ExportTracks();
+
+        Add(btnSearch); Add(btnReload); Add(btnAdd); Add(btnEdit); Add(btnToggle); Add(btnDelete); Add(btnExport);
+        Sep();
+
+        var btnHelp = new ModernButton { Text = "說明", Width = 120, IsPrimary = false };
+        btnHelp.Click += (s, e) =>
+            MessageBox.Show("電子發票字軌管理 v1.1\n1. 建置國稅局配發之各期字軌（年度／月期／字軌／起迄號）。\n2. 出貨／進貨存檔時可自動配號並登記開立紀錄。\n3. 下方顯示所選字軌的發票開立與作廢紀錄（含使用進度）。",
+                "說明", MessageBoxButtons.OK, MessageBoxIcon.Information);
         var btnExit = new ModernButton { Text = "離開", Width = 100, IsPrimary = false };
         btnExit.Click += (s, e) => Close();
 
-        Add(btnAdd); Add(btnEdit); Add(btnToggle); Add(btnDelete); Add(btnExport); Add(btnExit);
+        Add(btnHelp); Add(btnExit);
         Controls.Add(bar);
     }
 

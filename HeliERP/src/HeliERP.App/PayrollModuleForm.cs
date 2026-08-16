@@ -17,19 +17,20 @@ public sealed class PayrollModuleForm : Form
 {
     // 出缺勤
     private readonly DataGridView _gridAtt = new(), _gridAttDetail = new();
-    private readonly Label _lblAtt = new();
     private string _attEmp = "";
     private int _attYear, _attMonth;
+    private int _attCount;
 
     // 薪資設定
     private readonly DataGridView _gridCfg = new();
-    private readonly Label _lblCfg = new();
+    private int _cfgCount;
 
     // 薪資計算
     private readonly DataGridView _gridPay = new();
-    private readonly Label _lblPay = new();
+    private int _payCount;
 
     private readonly TabControl _tabs = new();
+    private Label _lblStatus = null!;
 
     public PayrollModuleForm()
     {
@@ -40,41 +41,132 @@ public sealed class PayrollModuleForm : Form
         UiTheme.Apply(this);
         Controls.Add(UiTheme.BuildHeader("薪資系統", "出缺勤記錄、計薪項目設定與月薪計算"));
 
+        BuildGlobalToolbar();
+        BuildStatusBar();
+
         _tabs.Dock = DockStyle.Fill;
         _tabs.Font = UiTheme.Font(10.5F);
         _tabs.Controls.Add(BuildAttendanceTab());
         _tabs.Controls.Add(BuildConfigTab());
         _tabs.Controls.Add(BuildPayrollTab());
+        _tabs.SelectedIndexChanged += (s, e) => UpdateStatusBar();
         Controls.Add(_tabs);
 
-        LoadAttendance();
-        LoadConfig();
-        LoadPayroll();
+        Load += (s, e) =>
+        {
+            LoadAttendance();
+            LoadConfig();
+            LoadPayroll();
+            UpdateStatusBar();
+        };
 
-        ShortcutHelper.Enable(this,
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) EditConfig(null);
-                else EditAttendance(null);
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) EditConfig(CfgRow());
-                else EditAttendance(AttRow());
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) DeleteConfig();
-                else DeleteAttendance();
-            },
-            () =>
-            {
-                if (_tabs.SelectedIndex == 1) LoadConfig();
-                else LoadAttendance();
-            });
+        ShortcutHelper.Enable(this, AddCurrent, EditCurrent, DeleteCurrent, ReloadCurrent, ReloadCurrent);
         UiTheme.ScaleForDpi(this);
 
         UiTheme.ClampToScreen(this);
+    }
+
+    // ==================== 全域工具列 ====================
+
+    private void BuildGlobalToolbar()
+    {
+        var bar = new Panel { Dock = DockStyle.Top, Height = 52 };
+        UiTheme.StyleTopBar(bar);
+
+        int x = UiTheme.SpacingMd;
+        void Add(ModernButton b)
+        {
+            b.Location = new Point(x, 6);
+            b.Height = 40;
+            b.DrawShadow = false;
+            bar.Controls.Add(b);
+            x += b.Width + UiTheme.SpacingSm;
+        }
+        void Sep()
+        {
+            bar.Controls.Add(new Panel
+            {
+                Location = new Point(x, 10),
+                Size = new Size(2, 32),
+                BackColor = UiTheme.Border,
+            });
+            x += UiTheme.SpacingSm + 2;
+        }
+
+        var btnSearch = new ModernButton { Text = "搜尋", Width = 120 };
+        btnSearch.Click += (s, e) => ReloadCurrent();
+        var btnReload = new ModernButton { Text = "重讀", Width = 120, IsPrimary = false };
+        btnReload.Click += (s, e) => ReloadCurrent();
+        var btnNew = new ModernButton { Text = "新增", Width = 120 };
+        btnNew.Click += (s, e) => AddCurrent();
+        var btnEdit = new ModernButton { Text = "修改", Width = 120, IsPrimary = false };
+        btnEdit.Click += (s, e) => EditCurrent();
+        var btnDel = new ModernButton { Text = "刪除", Width = 120, IsPrimary = false };
+        btnDel.Click += (s, e) => DeleteCurrent();
+
+        Add(btnSearch); Add(btnReload); Add(btnNew); Add(btnEdit); Add(btnDel);
+        Sep();
+
+        var btnHelp = new ModernButton { Text = "說明", Width = 120, IsPrimary = false };
+        btnHelp.Click += (s, e) =>
+            MessageBox.Show("薪資系統 v1.0\n出缺勤：依員工／年度／月份記錄每日出缺班別與時間。\n薪資設定：計薪項目（加減項、單位金額、公式）維護。\n薪資計算：依年度／月份執行計算並檢視結果。",
+                "說明", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var btnExit = new ModernButton { Text = "離開", Width = 120, IsPrimary = false };
+        btnExit.Click += (s, e) => Close();
+
+        Add(btnHelp); Add(btnExit);
+
+        Controls.Add(bar);
+    }
+
+    private void BuildStatusBar()
+    {
+        var bar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = UiTheme.BorderLight };
+        _lblStatus = new Label
+        {
+            Text = "狀態: 就緒",
+            AutoSize = true,
+            Location = new Point(12, 5),
+            ForeColor = UiTheme.TextSub,
+            Font = UiTheme.Font(10.5F, FontStyle.Bold),
+        };
+        bar.Controls.Add(_lblStatus);
+        Controls.Add(bar);
+    }
+
+    private void UpdateStatusBar()
+    {
+        _lblStatus.Text = _tabs.SelectedIndex switch
+        {
+            1 => $"薪資設定：共 {_cfgCount} 項計薪設定",
+            2 => $"薪資計算：共 {_payCount} 筆薪資",
+            _ => $"出缺勤：共 {_attCount} 筆出缺勤",
+        };
+    }
+
+    private void AddCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) EditConfig(null);
+        else EditAttendance(null);
+    }
+
+    private void EditCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) EditConfig(CfgRow());
+        else EditAttendance(AttRow());
+    }
+
+    private void DeleteCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) DeleteConfig();
+        else DeleteAttendance();
+    }
+
+    private void ReloadCurrent()
+    {
+        if (_tabs.SelectedIndex == 1) LoadConfig();
+        else if (_tabs.SelectedIndex == 2) LoadPayroll();
+        else LoadAttendance();
     }
 
     // ==================== 出缺勤 ====================
@@ -85,15 +177,7 @@ public sealed class PayrollModuleForm : Form
         var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 280 };
 
         var top = new Panel { Dock = DockStyle.Fill };
-        var topBar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditAttendance(null)),
-            ("修改", () => EditAttendance(AttRow())),
-            ("刪除", () => DeleteAttendance()),
-            ("重新整理", () => LoadAttendance()),
-        }, _lblAtt);
-        top.Controls.Add(topBar);
         top.Controls.Add(_gridAtt);
-        topBar.Dock = DockStyle.Top;
         _gridAtt.Dock = DockStyle.Fill;
         StyleGrid(_gridAtt);
         _gridAtt.SelectionChanged += (s, e) => LoadAttendanceDetail();
@@ -103,7 +187,7 @@ public sealed class PayrollModuleForm : Form
             ("新增明細", () => EditAttendanceDetail(null)),
             ("修改明細", () => EditAttendanceDetail(AttDetailRow())),
             ("刪除明細", () => DeleteAttendanceDetail()),
-        }, null);
+        });
         bottom.Controls.Add(bottomBar);
         bottom.Controls.Add(_gridAttDetail);
         bottomBar.Dock = DockStyle.Top;
@@ -137,7 +221,8 @@ public sealed class PayrollModuleForm : Form
             "FROM [出缺主檔] a LEFT JOIN [員工資料] e ON e.[員工編號]=a.[員工編號] " +
             "ORDER BY a.[出勤年度] DESC, a.[出勤月份] DESC, a.[員工編號]");
         _gridAtt.DataSource = dt;
-        _lblAtt.Text = $"共 {dt.Rows.Count} 筆出缺勤";
+        _attCount = dt.Rows.Count;
+        UpdateStatusBar();
         if (dt.Rows.Count > 0)
         {
             _gridAtt.Rows[0].Selected = true;
@@ -252,14 +337,6 @@ public sealed class PayrollModuleForm : Form
     private TabPage BuildConfigTab()
     {
         var page = new TabPage("薪資設定") { BackColor = UiTheme.Background };
-        var bar = BuildBar(new (string Text, Action Action)[] {
-            ("新增", () => EditConfig(null)),
-            ("修改", () => EditConfig(CfgRow())),
-            ("刪除", () => DeleteConfig()),
-            ("重新整理", () => LoadConfig()),
-        }, _lblCfg);
-        bar.Dock = DockStyle.Top;
-        page.Controls.Add(bar);
         page.Controls.Add(_gridCfg);
         _gridCfg.Dock = DockStyle.Fill;
         StyleGrid(_gridCfg);
@@ -280,7 +357,8 @@ public sealed class PayrollModuleForm : Form
             "FROM [薪資設定] c LEFT JOIN [員工資料] e ON e.[員工編號]=c.[員工編號] " +
             "ORDER BY c.[員工編號], c.[計薪編號]");
         _gridCfg.DataSource = dt;
-        _lblCfg.Text = $"共 {dt.Rows.Count} 項計薪設定";
+        _cfgCount = dt.Rows.Count;
+        UpdateStatusBar();
     }
 
     private void EditConfig(DataRow? row)
@@ -330,9 +408,7 @@ public sealed class PayrollModuleForm : Form
         topBar.Controls.Add(new Label { Text = "月份", ForeColor = UiTheme.TextMain, AutoSize = true, Location = new Point(152, 18) });
         topBar.Controls.Add(numMonth);
         var btnCalc = new ModernButton { Text = "執行薪資計算", IsPrimary = true, DrawShadow = false, CornerRadius = 6, Size = new Size(140, 34), Location = new Point(286, 9) };
-        var btnRefresh = new ModernButton { Text = "重新整理", IsPrimary = false, DrawShadow = false, CornerRadius = 6, Size = new Size(96, 34), Location = new Point(434, 9) };
         topBar.Controls.Add(btnCalc);
-        topBar.Controls.Add(btnRefresh);
         lblMsg.Location = new Point(545, 18);
 
         page.Controls.Add(topBar);
@@ -354,7 +430,6 @@ public sealed class PayrollModuleForm : Form
                 MessageBox.Show(this, "計算失敗：" + ex.Message, "薪資計算", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         };
-        btnRefresh.Click += (s, e) => LoadPayroll();
         return page;
     }
 
@@ -366,12 +441,13 @@ public sealed class PayrollModuleForm : Form
             "FROM [薪資主檔] p LEFT JOIN [員工資料] e ON e.[員工編號]=p.[員工編號] " +
             "ORDER BY p.[薪資年度] DESC, p.[薪資月份] DESC, p.[員工編號]");
         _gridPay.DataSource = dt;
-        _lblPay.Text = $"共 {dt.Rows.Count} 筆薪資";
+        _payCount = dt.Rows.Count;
+        UpdateStatusBar();
     }
 
     // ==================== 共用 ====================
 
-    private Panel BuildBar((string Text, Action Action)[] buttons, Label? status)
+    private Panel BuildBar((string Text, Action Action)[] buttons)
     {
         var bar = new Panel { Height = 46, BackColor = UiTheme.Background, Padding = new Padding(10, 6, 10, 6) };
         int x = 12;
@@ -382,14 +458,6 @@ public sealed class PayrollModuleForm : Form
             x += b.Width + 8;
             b.Click += (s, e) => action();
             bar.Controls.Add(b);
-        }
-        if (status is not null)
-        {
-            status.AutoSize = true;
-            status.Font = UiTheme.Font(9.5F);
-            status.ForeColor = UiTheme.TextSub;
-            status.Location = new Point(x + 8, 14);
-            bar.Controls.Add(status);
         }
         return bar;
     }

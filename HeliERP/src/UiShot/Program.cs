@@ -89,6 +89,7 @@ var targets = new List<(string Name, Func<Form> Factory)>
     ("14-AccountingModuleForm", () => new AccountingModuleForm()),
     ("15-PoOrderForm", () => new PoOrderForm()),
     ("16-ReportMenuForm", () => new ReportMenuForm()),
+    ("17-HelpForm", () => new HelpForm()),
 };
 
 // 泛型維護：渲染主要主檔表（客戶廠商、倉庫資料、權限主檔）與複合主鍵 Editable 表
@@ -144,7 +145,7 @@ bool RenderOne(string name, Func<Form> factory, string outDir)
     }
     if (error is not null)
     {
-        Console.WriteLine($"FAIL  {name}  {error.GetType().Name}: {error.Message}");
+        Console.WriteLine($"FAIL  {name}  {error}");
         return false;
     }
     lock (uiLock)

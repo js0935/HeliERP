@@ -19,7 +19,7 @@
 | 主檔維護 | 客戶廠商、貨品、員工、科目等基本資料；分頁表單式編輯或欄位定義式編輯 | `FormMasterForm`、`GenericTableForm`、`GenericEditorDialog` |
 | 報表 | 141 種單據／報表，Rtm 樣版渲染、重疊檢查 | `ReportMenuForm`、`ReportPrintService` |
 | 系統設定 | 參數、權限（角色/畫面）、核准層數、審計日誌、發票字軌、健康檢查 | `SystemSettingsForm`、`ApprovalForm`、`AuditLogForm`、`InvoiceTrackForm`、`HealthCheckForm` |
-| 其他 | 全域搜尋、折扣作業、資料備份還原、匯出共用（Excel/Word/HTML 等） | `GlobalSearchForm`、`DiscountForm`、`BackupService`、`ExportService` |
+| 其他 | 全域搜尋、折扣作業、資料備份還原、匯出共用（Excel/Word/HTML 等）、快捷鍵與操作說明 | `GlobalSearchForm`、`DiscountForm`、`BackupService`、`ExportService`、`HelpForm` |
 
 ## 技術架構
 

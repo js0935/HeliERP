@@ -42,6 +42,14 @@ static class Program
 
         var user = login.LoggedInUser!;
 
+        // 第一次使用：公司基本資料未設定時強制填寫，未完成即結束程式
+        if (string.IsNullOrWhiteSpace(config.Company.CompanyName))
+        {
+            using var setup = new FirstRunSetupForm(config);
+            if (setup.ShowDialog() != DialogResult.OK)
+                return;
+        }
+
         // 主視窗
         Application.Run(new MainForm(config, user));
     }

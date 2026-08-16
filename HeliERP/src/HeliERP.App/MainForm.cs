@@ -299,7 +299,7 @@ public class MainForm : Form
                 CornerRadius = 6,
             };
             tip.SetToolTip(btn, desc);
-            btn.Click += (s, e) => open();
+            btn.Click += (s, e) => { RecentModules.Record(name); open(); };
             flow.Controls.Add(btn);
         }
 
@@ -420,7 +420,7 @@ public class MainForm : Form
 
         var quickCard = new Panel
         {
-            Size = new Size(640, 96),
+            Size = new Size(640, 158),
             Margin = new Padding(0, UiTheme.SpacingSm, 0, 0),
         };
         UiTheme.StyleCardPanel(quickCard, UiTheme.SpacingLg);
@@ -439,7 +439,7 @@ public class MainForm : Form
             Location = new Point(UiTheme.SpacingLg, 48),
             IsPrimary = true,
         };
-        btnRepair.Click += (s, e) => OpenRepairModule();
+        btnRepair.Click += (s, e) => { RecentModules.Record("維修管理"); OpenRepairModule(); };
         var btnGoods = new ModernButton
         {
             Text = "貨品主檔",
@@ -448,7 +448,7 @@ public class MainForm : Form
             IsPrimary = false,
             DrawShadow = false,
         };
-        btnGoods.Click += (s, e) => OpenProductMaintenance();
+        btnGoods.Click += (s, e) => { RecentModules.Record("貨品主檔"); OpenProductMaintenance(); };
         var btnTables = new ModernButton
         {
             Text = "基本資料維護",
@@ -457,10 +457,45 @@ public class MainForm : Form
             IsPrimary = false,
             DrawShadow = false,
         };
-        btnTables.Click += (s, e) => OpenTableBrowser();
+        btnTables.Click += (s, e) => { RecentModules.Record("基本資料"); OpenTableBrowser(); };
         quickCard.Controls.Add(btnRepair);
         quickCard.Controls.Add(btnGoods);
         quickCard.Controls.Add(btnTables);
+
+        var recentFlow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Location = new Point(UiTheme.SpacingLg, 100),
+            BackColor = Color.Transparent,
+        };
+        recentFlow.Controls.Add(new Label
+        {
+            Text = "最近使用",
+            Font = UiTheme.Font(10F, FontStyle.Bold),
+            ForeColor = UiTheme.TextSub,
+            AutoSize = true,
+            Margin = new Padding(0, 8, 10, 0),
+        });
+        var recentByName = _modules.Where(m => !m.Dev).ToDictionary(m => m.Name, m => m.Open);
+        foreach (var n in RecentModules.Load().Take(5))
+        {
+            if (!recentByName.TryGetValue(n, out var open)) continue;
+            var rb = new ModernButton
+            {
+                Text = n,
+                Size = new Size(104, 32),
+                IsPrimary = false,
+                DrawShadow = false,
+                CornerRadius = 6,
+                Font = UiTheme.Font(9F, FontStyle.Bold),
+                Margin = new Padding(0, 0, 6, 0),
+            };
+            rb.Click += (s, e) => { RecentModules.Record(n); open(); };
+            recentFlow.Controls.Add(rb);
+        }
+        quickCard.Controls.Add(recentFlow);
         box.Controls.Add(quickCard);
 
         content.Controls.Add(box);

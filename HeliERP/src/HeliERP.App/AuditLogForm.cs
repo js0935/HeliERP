@@ -26,6 +26,8 @@ public sealed class AuditLogForm : Form
         Text = "稽核日誌";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         Controls.Add(UiTheme.BuildHeader("稽核日誌", "登入／登出／失敗嘗試與關鍵單據異動軌跡（僅系統管理員可見）"));

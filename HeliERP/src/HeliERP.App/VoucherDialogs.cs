@@ -26,6 +26,8 @@ public static class VoucherDialogs
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(540, 420),
+            AutoScaleMode = AutoScaleMode.Dpi,
+            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10F),
         };
@@ -116,6 +118,8 @@ public static class VoucherDialogs
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(520, 480),
+            AutoScaleMode = AutoScaleMode.Dpi,
+            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10F),
         };

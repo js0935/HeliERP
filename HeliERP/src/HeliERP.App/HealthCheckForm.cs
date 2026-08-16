@@ -23,6 +23,8 @@ public sealed class HealthCheckForm : Form
         Text = "系統健康檢查";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         Controls.Add(UiTheme.BuildHeader("系統健康檢查",

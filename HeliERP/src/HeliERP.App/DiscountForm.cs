@@ -40,6 +40,8 @@ public sealed class DiscountForm : Form
         Text = "折讓作業";
         StartPosition = FormStartPosition.CenterParent;
         WindowState = FormWindowState.Maximized;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         var header = UiTheme.BuildHeader("折讓作業", "出貨折讓／進貨折讓，沖減應收／應付帳款（不異動庫存）");

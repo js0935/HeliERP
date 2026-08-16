@@ -20,6 +20,8 @@ public sealed class ReportMenuForm : Form
         Text = "報表列印";
         Size = new Size(820, 720);
         MinimumSize = new Size(640, 480);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
         StartPosition = FormStartPosition.CenterScreen;
 
@@ -446,6 +448,8 @@ public sealed class ReportMenuForm : Form
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(360, 152),
+            AutoScaleMode = AutoScaleMode.Dpi,
+            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
         };
         dlg.Controls.Add(new Label

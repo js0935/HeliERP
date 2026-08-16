@@ -25,6 +25,8 @@ public sealed class SystemSettingsForm : Form
         Text = "系統設定";
         Size = new Size(760, 600);
         MinimumSize = new Size(600, 420);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
         StartPosition = FormStartPosition.CenterScreen;
 
@@ -198,6 +200,8 @@ public sealed class SystemSettingsForm : Form
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(380, 264),
+            AutoScaleMode = AutoScaleMode.Dpi,
+            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10.5F),
         };

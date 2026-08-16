@@ -26,6 +26,8 @@ public sealed class InvoiceTrackForm : Form
         Text = "電子發票字軌管理";
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         BackColor = UiTheme.Background;
 
         Controls.Add(UiTheme.BuildHeader("電子發票字軌管理",
@@ -271,6 +273,8 @@ public sealed class InvoiceTrackForm : Form
             MinimizeBox = false,
             StartPosition = FormStartPosition.CenterParent,
             ClientSize = new Size(420, 340),
+            AutoScaleMode = AutoScaleMode.Dpi,
+            AutoScaleDimensions = new SizeF(96F, 96F),
             BackColor = UiTheme.Background,
             Font = UiTheme.Font(10.5F),
         };

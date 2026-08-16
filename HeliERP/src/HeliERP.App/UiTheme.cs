@@ -80,7 +80,7 @@ public static class UiTheme
     /// </summary>
     public static void ClampToScreen(Form form)
     {
-        form.Load += (s, e) =>
+        void DoClamp()
         {
             try
             {
@@ -142,7 +142,10 @@ public static class UiTheme
             {
                 // 縮放失敗時維持原樣，不影響啟動
             }
-        };
+        }
+
+        form.Load += (s, e) => DoClamp();
+        form.Shown += (s, e) => DoClamp();
     }
 
     /// <summary>

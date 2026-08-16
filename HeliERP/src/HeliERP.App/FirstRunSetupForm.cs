@@ -89,6 +89,7 @@ public class FirstRunSetupForm : Form
         btnRow.Controls.AddRange(new Control[] { btnOk, btnCancel, _lblMsg });
 
         Controls.AddRange(new Control[] { card, btnRow });
+        UiTheme.ClampToScreen(this);
     }
 
     private void OkClick()

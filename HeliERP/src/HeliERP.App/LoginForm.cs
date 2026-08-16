@@ -21,6 +21,8 @@ public class LoginForm : Form
     private readonly ModernButton _btnLogin;
     private readonly ModernButton _btnCancel;
     private readonly Label _lblMessage;
+    private readonly Label _lblBrand;
+    private readonly Label _lblBrandSub;
     private readonly List<DbOption> _dbOptions = new();
     private bool _loadingDatabases;
 
@@ -153,13 +155,38 @@ public class LoginForm : Form
             Location = new Point(cardX, 512),
         };
 
-        Controls.AddRange(new Control[] { lblWelcome, lblHint, lblUser, lblPass, _txtUserId, _txtPassword, lblDb, _cmbDatabase, _btnBrowse, _lblMessage, _btnLogin, _btnCancel, lblCredit1, lblCredit2 });
+        // 左側品牌區文字（以 Label 呈現，高 DPI 下由 WinForms 自動縮放字體與位置，不會被縮放裁切）
+        var company = _config.Company.CompanyName;
+        var brandText = string.IsNullOrWhiteSpace(company) ? "HeliERP" : company;
+        var brandSub = string.IsNullOrWhiteSpace(company) ? "企業資源規劃系統"
+            : company.EndsWith("有限公司") ? "" : "有限公司";
+        _lblBrand = MakeBrandLabel(brandText, UiTheme.Font(20F, FontStyle.Bold), Color.White, new Size(260, 62), new Point(40, 150));
+        _lblBrandSub = MakeBrandLabel(brandSub, UiTheme.Font(12F), Color.FromArgb(200, 255, 255, 255), new Size(260, 26), new Point(40, 212));
+        var lblErp = MakeBrandLabel("企業資源規劃系統 ERP", UiTheme.Font(13F), Color.FromArgb(220, 255, 255, 255), new Size(260, 30), new Point(40, 274));
+        var lblTagline = MakeBrandLabel("安全 ・ 效率 ・ 專業", UiTheme.Font(10.5F), Color.FromArgb(170, 255, 255, 255), new Size(260, 26), new Point(40, 360));
+
+        Controls.AddRange(new Control[] { lblWelcome, lblHint, lblUser, lblPass, _txtUserId, _txtPassword, lblDb, _cmbDatabase, _btnBrowse, _lblMessage, _btnLogin, _btnCancel, lblCredit1, lblCredit2, _lblBrand, _lblBrandSub, lblErp, lblTagline });
         AcceptButton = _btnLogin;
         CancelButton = _btnCancel;
 
         LoadDatabases();
         UiTheme.ClampToScreen(this);
     }
+
+    /// <summary>建立左側品牌區文字標籤（透明背景以透出漸層）</summary>
+    private static Label MakeBrandLabel(string text, Font font, Color color, Size size, Point location) => new()
+    {
+        Text = text,
+        Font = font,
+        ForeColor = color,
+        BackColor = Color.Transparent,
+        AutoSize = false,
+        Size = size,
+        Location = location,
+        TextAlign = ContentAlignment.MiddleLeft,
+        Padding = new Padding(0),
+        Margin = new Padding(0),
+    };
 
     /// <summary>建立扁平風輸入框</summary>
     private static TextBox MakeTextBox(string text, int x, int y, int w)
@@ -280,47 +307,40 @@ public class LoginForm : Form
         }
     }
 
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        base.OnPaintBackground(e);
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        // 左側品牌區：深藍漸層（背景層繪製，讓透明 Label 透出漸層）
+        var w = ClientSize.Width;
+        var h = ClientSize.Height;
+        using (var left = new LinearGradientBrush(
+                   new RectangleF(0, 0, 340, h),
+                   UiTheme.PrimaryDark, UiTheme.PrimaryLight, LinearGradientMode.Vertical))
+        {
+            g.FillRectangle(left, 0, 0, 340, h);
+        }
+
+        // 右側白底
+        g.FillRectangle(Brushes.White, 340, 0, w - 340, h);
+
+        // 金色分隔線與品牌下方裝飾線
+        using (var accent = new SolidBrush(UiTheme.Accent))
+        {
+            g.FillRectangle(accent, 337, 0, 3, h);
+            g.FillRectangle(accent, 42, 254, 60, 3);
+        }
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        const float designH = 600f;
-
-        // 左側品牌區：深藍漸層
-        using (var left = new LinearGradientBrush(
-                   new RectangleF(0, 0, 340, designH),
-                   UiTheme.PrimaryDark, UiTheme.PrimaryLight, LinearGradientMode.Vertical))
-        {
-            g.FillRectangle(left, 0, 0, 340, designH);
-        }
-
-        // 右側白底
-        g.FillRectangle(Brushes.White, 340, 0, 420, designH);
-
         UiTheme.DrawCard(g, new Rectangle(360, 32, 380, 536), UiTheme.RadiusLg);
-
-        // 金色分隔線
-        using (var accent = new SolidBrush(UiTheme.Accent))
-            g.FillRectangle(accent, 337, 0, 3, designH);
-
-        // 品牌文字（DrawString 向量字形會隨 ScaleTransform 正確放大）
-        var name = _config.Company.CompanyName;
-        var brand = string.IsNullOrWhiteSpace(name) ? "HeliERP" : name;
-        var sub = string.IsNullOrWhiteSpace(name) ? "企業資源規劃系統"
-            : name.EndsWith("有限公司") ? "" : "有限公司";
-        g.DrawString(brand, UiTheme.Font(20F, FontStyle.Bold),
-            new SolidBrush(Color.White), new RectangleF(40, 150, 260, 62));
-        if (sub.Length > 0)
-            g.DrawString(sub, UiTheme.Font(12F),
-                new SolidBrush(Color.FromArgb(200, 255, 255, 255)), new RectangleF(40, 212, 260, 26));
-        using (var accent = new SolidBrush(UiTheme.Accent))
-            g.FillRectangle(accent, 42, 254, 60, 3);
-        g.DrawString("企業資源規劃系統 ERP", UiTheme.Font(13F),
-            new SolidBrush(Color.FromArgb(220, 255, 255, 255)), new RectangleF(40, 274, 260, 30));
-        g.DrawString("安全 ・ 效率 ・ 專業", UiTheme.Font(10.5F),
-            new SolidBrush(Color.FromArgb(170, 255, 255, 255)), new RectangleF(40, 360, 260, 26));
     }
 
     private void DoLogin()
